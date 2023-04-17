@@ -10,6 +10,7 @@ class Board:
         self.white = {}
         self.black = {}
         self.__flag = 1
+        self.__possible_moves = []
 
     def get_pieces(self):
         return self._pieces
@@ -19,6 +20,9 @@ class Board:
 
     def get_flag(self):
         return self.__flag
+
+    def get_moves(self):
+        return self.__possible_moves
 
     def set_flag(self):
         if self.__flag == 1:
@@ -30,6 +34,9 @@ class Board:
 
         self.__board = board
 
+    def add_moves(self, moves):
+        self.__possible_moves.append(moves)
+
     def set_pieces(self):
         self._pieces.clear()
         self._pieces.update(self.white)
@@ -38,12 +45,12 @@ class Board:
     def show_board(self):
         print(f'- |+++++++++++++++++++++++++++++++++++++++| ')
         for i in range(7, -1, -1):
-            print(end=f'{i+1} ')  # Here in future showing game moves on the right side of the board and maybe
+            print(end=f'{i + 1} ')  # Here in future showing game moves on the right side of the board and maybe
             print(end='| ')  # after game saving
             for j in range(8):
                 if isinstance(self.__board[i][j], str):
                     print(f'{self.__board[i][j]}', end=' | ')
-                elif (i+j) % 2 == 1:
+                elif (i + j) % 2 == 1:
                     print(f'//', end=' | ')
                 else:
                     print(f' ', end='  | ')
@@ -62,7 +69,7 @@ class Board:
                 self.black.update(working_dict)
 
     def set_pieces_on_board(self):
-        board = [[0]*8 for i in range(8)]
+        board = [[0] * 8 for i in range(8)]
 
         for piece in self.get_pieces().values():
             board[piece.get_position()[0]][piece.get_position()[1]] = piece.get_name()
@@ -162,13 +169,14 @@ class Board:
 
         for piece in piece_list:
             if piece.get_name()[1] == 'P' and piece.get_position()[1] == first_coor[1] \
-                    and piece.get_position()[0] == coordinates[0]+a:  # check if good place for diagonal pawn capture
+                    and piece.get_position()[0] == coordinates[0] + a:  # check if good place for diagonal pawn capture
 
                 if self.get_board()[coordinates[0]][coordinates[1]] == 0:  # check if en passant
                     b = [i for i in other_pieces_d if other_pieces_d[i].get_position() ==
-                         [coordinates[0]+a, coordinates[1]] and other_pieces_d[i].get_name()[1] == 'P']
+                         [coordinates[0] + a, coordinates[1]] and other_pieces_d[i].get_name()[1] == 'P']
 
-                    if len(b) > 0 and other_pieces_d[b[0]].get_prev_position()[0] == \
+                    if len(b) > 0 and len(other_pieces_d[b[0]].get_prev_position()) > 0 and\
+                            other_pieces_d[b[0]].get_prev_position()[0] == \
                             other_pieces_d[b[0]].get_position()[0] - a - a:
 
                         del other_pieces_d[b[0]]
@@ -248,19 +256,22 @@ class Board:
             if piece.get_name()[1] == 'P' and piece.get_position()[1] == coordinates[1] \
                     and self.get_board()[coordinates[0]][coordinates[1]] == 0:
                 if self.get_flag() == 1 and piece.get_position()[0] == 1 and coordinates[0] == 3 \
-                        and self.get_board()[coordinates[0]+a][coordinates[1]] == 0:  # jump over 2 squares
+                        and self.get_board()[coordinates[0] + a][coordinates[1]] == 0:  # jump over 2 squares
                     move_flag = 1
                     self.move_white_piece(piece, coordinates)
                     break
                 elif self.get_flag() == 0 and piece.get_position()[0] == 6 and coordinates[0] == 4 \
-                        and self.get_board()[coordinates[0]+a][coordinates[1]] == 0:
+                        and self.get_board()[coordinates[0] + a][coordinates[1]] == 0:
                     move_flag = 1
                     self.move_black_piece(piece, coordinates)
                     break
-                elif piece.get_position()[0] == coordinates[0]+a:
+                elif piece.get_position()[0] == coordinates[0] + a:
                     if coordinates[0] == 7:  # white promotion
                         move_flag = 1
-                        promoted_pawn = self.pawn_promotion('white', move[3], coordinates)
+                        if len(move) < 3:
+                            promoted_pawn = self.pawn_promotion('white', 'Q', coordinates)
+                        else:
+                            promoted_pawn = self.pawn_promotion('white', move[3], coordinates)
 
                         for i in range(8):
                             if i not in self.white.keys():
@@ -273,7 +284,10 @@ class Board:
                         break
                     elif coordinates[0] == 0:  # black promotion
                         move_flag = 1
-                        promoted_pawn = self.pawn_promotion('black', move[3], coordinates)
+                        if len(move) < 3:
+                            promoted_pawn = self.pawn_promotion('white', 'Q', coordinates)
+                        else:
+                            promoted_pawn = self.pawn_promotion('white', move[3], coordinates)
 
                         for i in range(8, 16):
                             if i not in self.black.keys():
@@ -375,7 +389,7 @@ class Board:
                 if change in knight_moves:
                     b = [i for i in other_pieces_d if other_pieces_d[i].get_position() == coordinates]
                     if len(b) > 0:
-                        if move[2] == 'x':  # need to choose from 2 or more knights on row or column
+                        if move[2] == 'x':  # if need to choose from 2 or more knights on row or column
                             move_flag = self.capture_piece_from_adequate_square(
                                 piece, move, coordinates, other_pieces_d, b)
                         else:
@@ -399,6 +413,8 @@ class Board:
                 if change in knight_moves and self.get_board()[coordinates[0]][coordinates[1]] == 0:
                     if len(move) > 3:
                         move_flag = self.move_piece_from_adequate_square(piece, coordinates, move)
+                        if move_flag == 1:
+                            break
                     else:
                         move_flag = self.normal_move(piece, coordinates)
         if move_flag == 0:
@@ -423,7 +439,7 @@ class Board:
                     if len(b) > 0:  # check if on coordinates is capturable piece
                         if abs(piece.get_position()[0] - coordinates[0]) == 1:
                             if move[2] == 'x':
-                                move_flag = self. capture_piece_from_adequate_square(
+                                move_flag = self.capture_piece_from_adequate_square(
                                     piece, move, coordinates, other_pieces_d, b)
                             else:
                                 move_flag = self.normal_capture(piece, coordinates, other_pieces_d, b)
@@ -431,10 +447,11 @@ class Board:
                             row_change = piece.get_position()[0] - coordinates[0]
                             column_change = piece.get_position()[1] - coordinates[1]
                             c = 0
-                            if row_change*column_change > 0:
+                            if row_change * column_change > 0:
                                 if row_change < 0:
                                     for i in range(1, abs(row_change)):
-                                        if self.get_board()[piece.get_position()[0]+i][piece.get_position()[1]+i] != 0:
+                                        if self.get_board()[piece.get_position()[0] + i][
+                                            piece.get_position()[1] + i] != 0:
                                             c += 1
                                     if c == 0:
                                         if move[2] == 'x':
@@ -444,7 +461,8 @@ class Board:
                                             move_flag = self.normal_capture(piece, coordinates, other_pieces_d, b)
                                 else:
                                     for i in range(1, abs(row_change)):
-                                        if self.get_board()[piece.get_position()[0]-i][piece.get_position()[1]-i] != 0:
+                                        if self.get_board()[piece.get_position()[0] - i][
+                                            piece.get_position()[1] - i] != 0:
                                             c += 1
                                     if c == 0:
                                         if move[2] == 'x':
@@ -464,7 +482,7 @@ class Board:
                                         move_flag = self.normal_capture(piece, coordinates, other_pieces_d, b)
                             elif column_change < 0:
                                 for i in range(1, abs(row_change)):
-                                    if self.get_board()[piece.get_position()[0]-i][piece.get_position()[1]+i] != 0:
+                                    if self.get_board()[piece.get_position()[0] - i][piece.get_position()[1] + i] != 0:
                                         c += 1
                                 if c == 0:
                                     if move[2] == 'x':
@@ -554,7 +572,7 @@ class Board:
                         change = piece.get_position()[1] - coordinates[1]
                         if change == 1 or change == -1:
                             if move[2] == 'x':
-                                move_flag = self. capture_piece_from_adequate_square(
+                                move_flag = self.capture_piece_from_adequate_square(
                                     piece, move, coordinates, other_pieces_d, b)
                             else:
                                 move_flag = self.normal_capture(piece, coordinates, other_pieces_d, b)
@@ -566,7 +584,7 @@ class Board:
                             if c == 0:
                                 if move[2] == 'x':
                                     move_flag = self.capture_piece_from_adequate_square(
-                                        piece, move,  coordinates, other_pieces_d, b)
+                                        piece, move, coordinates, other_pieces_d, b)
                                 else:
                                     move_flag = self.normal_capture(piece, coordinates, other_pieces_d, b)
                         elif change < -1:
@@ -577,7 +595,7 @@ class Board:
                             if c == 0:
                                 if move[2] == 'x':
                                     move_flag = self.capture_piece_from_adequate_square(
-                                        piece, move,  coordinates, other_pieces_d, b)
+                                        piece, move, coordinates, other_pieces_d, b)
                                 else:
                                     move_flag = self.normal_capture(piece, coordinates, other_pieces_d, b)
 
@@ -743,7 +761,136 @@ class Board:
             print(f'Nie możesz wykonać roszady {move}.')
             print(f'Zaproponuj inny ruch.')
 
+    def pawn_possible_moves(self, color):
+        if color == 'white':
+            piece_list = self.white.values()
+            a = 1
+        elif color == 'black':
+            piece_list = self.black.values()
+            a = -1
+        moves = []
+
+        for piece in piece_list:  # moves forward
+            if piece.get_name()[1] == 'P':
+                if self.get_board()[piece.get_position()[0] + a][piece.get_position()[1]] == 0:  # 1 square move
+                    move = '{}{}'.format(get_chess_coordinates(piece.get_position()[1], piece.get_position()[0])[0],
+                                         get_chess_coordinates(piece.get_position()[1], piece.get_position()[0])[1] + a)
+                    moves.append(move)
+                if 0 <= piece.get_position()[0] + a + a <= 7:
+                    if self.get_board()[piece.get_position()[0] + a][piece.get_position()[1]] == 0 \
+                            and self.get_board()[piece.get_position()[0] + a + a][piece.get_position()[1]] == 0 \
+                            and (piece.get_position()[0] == 1 or piece.get_position()[0] == 6):  # 2 square move
+                        move = '{}{}'.format(get_chess_coordinates(piece.get_position()[1], piece.get_position()[0])[0],
+                                             get_chess_coordinates(piece.get_position()[1], piece.get_position()[0])[
+                                                 1] + a + a)
+                        moves.append(move)
+                if piece.get_position()[0] + a in [0, 7]:  # promotion
+                    for letter in ['Q', 'R', 'B', 'N']:
+                        move = '{}{}{}{}'.format(get_chess_coordinates(piece.get_position()[1],
+                                                                       piece.get_position()[0])[0],
+                                                 get_chess_coordinates(piece.get_position()[1],
+                                                                       piece.get_position()[0])[1] + a,
+                                                 '=', letter)
+                        moves.append(move)
+                if 0 <= piece.get_position()[1] + 1 <= 7:  # captures(to the right)
+                    cap_moves = self.format_pawn_capture(piece, a, 1, 'w', 'b')
+                    if len(cap_moves) > 0:
+                        for move in cap_moves:
+                            moves.append(move)
+                    cap_moves = self.format_pawn_capture(piece, a, 1, 'b', 'w')
+                    if len(cap_moves) > 0:
+                        for move in cap_moves:
+                            moves.append(move)
+                if 0 <= piece.get_position()[1] - 1 <= 7:  # captures(to the left)
+                    cap_moves = self.format_pawn_capture(piece, a, -1, 'w', 'b')
+                    if len(cap_moves) > 0:
+                        for move in cap_moves:
+                            moves.append(move)
+                    cap_moves = self.format_pawn_capture(piece, a, -1, 'b', 'w')
+                    if len(cap_moves) > 0:
+                        for move in cap_moves:
+                            moves.append(move)
+        return moves
+
+    def format_pawn_capture(self, piece, a, b, color1, color2):  # pawn, a(lower, higher according to pawn color, b - right,left cap)
+        moves = []
+        if piece.get_name()[0] == color1:
+            if str(self.get_board()[piece.get_position()[0] + a][piece.get_position()[1] + b])[0] == color2:  # basic cap
+                if piece.get_position()[0] + a in [0, 7]:  # promotion
+                    for letter in ['Q', 'R', 'B', 'N']:
+                        move = '{}{}{}{}{}{}'.format(get_chess_coordinates(piece.get_position()[1],
+                                                                           piece.get_position()[0])[0],
+                                                     'x', get_chess_coordinates(piece.get_position()[1] + b,
+                                                                                piece.get_position()[0] + a)[0],
+                                                     get_chess_coordinates(piece.get_position()[1],
+                                                                           piece.get_position()[0] + a)[1],
+                                                     '=', letter)
+                        moves.append(move)
+                move = '{}{}{}{}'.format(get_chess_coordinates(piece.get_position()[1],
+                                                               piece.get_position()[0])[0],
+                                         'x', get_chess_coordinates(piece.get_position()[1] + b,
+                                                                    piece.get_position()[0] + a)[0],
+                                         get_chess_coordinates(piece.get_position()[1],
+                                                               piece.get_position()[0] + a)[1])
+                moves.append(move)
+            elif piece.get_position()[0] == 4 and color1 == 'w' and \
+                    str(self.get_board()[piece.get_position()[0]][piece.get_position()[1] + b])[0] == color2:  # check if en passant
+                other_pawn = [i for i in self.black if self.black[i].get_name()[1] == 'P'
+                     and self.black[i].get_position() == [piece.get_position()[0], piece.get_position()[1] + b]]
+
+                if len(other_pawn) > 0 and len(self.black[other_pawn[0]].get_prev_position()) > 0 and\
+                        self.black[other_pawn[0]].get_prev_position()[0] == \
+                        self.black[other_pawn[0]].get_position()[0] + a + a:
+                    move = '{}{}{}{}'.format(get_chess_coordinates(piece.get_position()[1],
+                                                                   piece.get_position()[0])[0],
+                                             'x', get_chess_coordinates(piece.get_position()[1] + b,
+                                                                        piece.get_position()[0] + a)[0],
+                                             get_chess_coordinates(piece.get_position()[1],
+                                                                   piece.get_position()[0] + a)[1])
+                    moves.append(move)
+            elif piece.get_position()[0] == 3 and color1 == 'b' and \
+                    str(self.get_board()[piece.get_position()[0]][piece.get_position()[1] + b])[0] == color2:  # check if en passant
+                other_pawn = [i for i in self.white if self.white[i].get_name()[1] == 'P'
+                     and self.white[i].get_position() == [piece.get_position()[0], piece.get_position()[1] + b]]
+                if len(other_pawn) > 0 and self.white[other_pawn[0]].get_prev_position()[0] == \
+                        self.white[other_pawn[0]].get_position()[0] + a + a:
+                    move = '{}{}{}{}'.format(get_chess_coordinates(piece.get_position()[1],
+                                                                   piece.get_position()[0])[0],
+                                             'x', get_chess_coordinates(piece.get_position()[1] + b,
+                                                                        piece.get_position()[0] + a)[0],
+                                             get_chess_coordinates(piece.get_position()[1],
+                                                                   piece.get_position()[0] + a)[1])
+                    moves.append(move)
+        return moves
+
+    def knight_possible_moves(self, color):
+        if color == 'white':
+            piece_list = self.white.values()
+        else:
+            piece_list = self.black.values()
+
+        moves = []
+        knight_moves = [[-2, -1], [-2, 1], [-1, -2], [-1, 2], [1, 2], [1, -2], [2, 1], [2, -1]]
+        for piece in piece_list:  # moves forward
+            if piece.get_name()[1] == 'N':
+                for change in knight_moves:
+                    if 0 <= piece.get_position()[0]+change[0] <= 7 and 0 <= piece.get_position()[1]+change[1] <= 7 and\
+                            self.get_board()[piece.get_position()[0]+change[0]][piece.get_position()[1]+change[1]] == 0:
+                        move = '{}{}{}'.format(piece.get_name()[1],
+                                               get_chess_coordinates(
+                                            piece.get_position()[1]+change[1], piece.get_position()[0]+change[0])[0],
+                                            get_chess_coordinates(
+                                                piece.get_position()[1]+change[1], piece.get_position()[0]+change[0])[1])
+                        print(move)  # if more than 1 knight can move to 1 square have to make table:
+                        moves.append(move)  # where it jumps from - how many knights f.e. g - 2 | 3 - 2 | c - 1 | 1 - 1 | and for knights that have unique value choose it, for others make both coordinates
+        return moves                        # also correct reading knights jumps if f.e. Ng3e2 cus rn it's only for Nge2
+
+    def check_moves(self):
+        moves = []
+        moves = self.pawn_possible_moves('white')
+
     def make_move(self, move):
+
         print("\n")
         print(f'Soldier! Order from your commander: {move}!')
         if move[0].isupper() is True:
@@ -819,7 +966,7 @@ class Board:
             elif move[0] == 'O':
                 self.castles(move)
 
-        else:  # pawns
+        elif move[0].islower() is True:  # pawns
             if move[1] == 'x':  # capture
                 coordinates = get_board_list_coordinates(move[2], move[3])
                 coordinates.reverse()
@@ -833,11 +980,25 @@ class Board:
                 coordinates.reverse()
 
                 self.pawn_move(coordinates, move)
+        else:
+            print("Wrong command!!1!")
+            return 0
         self.set_pieces()
         self.update_board()
 
+        if self.get_flag() == 1:
+            m = self.pawn_possible_moves('white')
+            print(f'Possible pawn moves: ', end = '')
+            print(*m, sep = ', ')
+            mn = self.knight_possible_moves('white')
+            print(*mn, end = ' ,')
+        else:
+            m = self.pawn_possible_moves('black')
+            print(f'Possible pawn moves: ', end='')
+            print(*m, sep=', ')
+
     def update_board(self):
-        board = [[0]*8 for i in range(8)]
+        board = [[0] * 8 for i in range(8)]
         for piece in self.white.values():
             board[piece.get_position()[0]][piece.get_position()[1]] = piece.get_name()
         for piece in self.black.values():
@@ -856,7 +1017,7 @@ class Piece:
         self.__prev_position = []
 
     def get_name(self):
-        return self.__color[0]+self.__name[0]
+        return self.__color[0] + self.__name[0]
 
     def get_position(self):
         return self.__position
@@ -938,7 +1099,7 @@ def prepare_pieces():
     pieces_d = {}
     for i in range(8):
         pieces_d["pawn{}".format(i)] = Pawn([1, i], 'white')
-        pieces_d["pawn{}".format(i+8)] = Pawn([6, i], 'black')
+        pieces_d["pawn{}".format(i + 8)] = Pawn([6, i], 'black')
 
     pieces_d.update(bishop1=Bishop([0, 2], 'white'), bishop2=Bishop([0, 5], 'white'))
     pieces_d.update(bishop3=Bishop([7, 2], 'black'), bishop4=Bishop([7, 5], 'black'))
@@ -989,18 +1150,32 @@ def print_hi(name):
     print(f'Hi, I am {name} \n')
     board = set_chessboard()
     board.sort_pieces()  # In future showing game moves on the right side of the board and maybe saving to pgn
-    board.make_move("e4")
-    board.make_move("e5")
-    board.make_move("Qe2")
-    board.make_move("Nc6")
-    board.make_move("Nc3")
-    board.make_move("b6")
-    board.make_move("b3")
-    board.make_move("Bb7")
-    board.make_move("Bb2")
-    board.make_move("Qh4")
-    board.make_move("O-O-O")
-    board.make_move("O-O-O")
+    moves = ['e4', 'e5', 'Nc3', 'Ne7', 'Nge2', 'Nbc6']  # write moves in order once
+    for move in moves:
+        board.make_move(move)
+
+    # c = str(input())  #write moves in console
+    # moves = c.split(',')
+    # for move in moves:
+    #     board.make_move(move)
+
+    # board.make_move("a4")
+    # board.make_move("b5")
+    # board.make_move("axb5")
+    # board.make_move("a4")
+    # board.make_move("Nf3")
+    # board.make_move("e6")
+    # board.make_move("d3")
+    # board.make_move("exf5")
+    # board.make_move("Nbd2")
+    # board.make_move("Ne4")
+    # board.make_move("Ng5")
+    # board.make_move("h6")
+    # board.make_move("Ndxe4")
+    # board.make_move("0-0")
+    for i in range(10):  # write 1 move at a time in console
+        i = str(input())
+        board.make_move(i)
     # for piece in board.get_pieces().values():
     #     if piece.get_name()[1] == 'P':
     #         print(piece.get_name(), piece.get_position())
@@ -1010,4 +1185,3 @@ if __name__ == '__main__':
     transition_dict = {0: 'a', 1: 'b', 2: 'c', 3: 'd', 4: 'e', 5: 'f', 6: 'g', 7: 'h'}  # przejście na szachowy układ
     transition_dict1 = {0: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 7, 7: 8}  # przejście na szachowy układ
     print_hi('PyChess')
-
