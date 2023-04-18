@@ -869,10 +869,13 @@ class Board:
         else:
             piece_list = self.black.values()
 
-        moves = []
         knight_moves = [[-2, -1], [-2, 1], [-1, -2], [-1, 2], [1, 2], [1, -2], [2, 1], [2, -1]]
+        tab = {}
+        moves = []
+
         for piece in piece_list:  # moves forward
             if piece.get_name()[1] == 'N':
+                moves = []
                 for change in knight_moves:
                     if 0 <= piece.get_position()[0]+change[0] <= 7 and 0 <= piece.get_position()[1]+change[1] <= 7 and\
                             self.get_board()[piece.get_position()[0]+change[0]][piece.get_position()[1]+change[1]] == 0:
@@ -881,8 +884,20 @@ class Board:
                                             piece.get_position()[1]+change[1], piece.get_position()[0]+change[0])[0],
                                             get_chess_coordinates(
                                                 piece.get_position()[1]+change[1], piece.get_position()[0]+change[0])[1])
-                        print(move)  # if more than 1 knight can move to 1 square have to make table:
+                        # print(move)  # if more than 1 knight can move to 1 square have to make table:
                         moves.append(move)  # where it jumps from - how many knights f.e. g - 2 | 3 - 2 | c - 1 | 1 - 1 | and for knights that have unique value choose it, for others make both coordinates
+                tab[piece] = moves
+
+        ranking = {}
+        for val in tab.values():
+            for move in val:
+                if move in ranking.keys():
+                    a = ranking[move]
+                    a += 1
+                    ranking[move] = a
+                else:
+                    ranking[move] = 1
+        print(ranking)
         return moves                        # also correct reading knights jumps if f.e. Ng3e2 cus rn it's only for Nge2
 
     def check_moves(self):
@@ -1150,7 +1165,7 @@ def print_hi(name):
     print(f'Hi, I am {name} \n')
     board = set_chessboard()
     board.sort_pieces()  # In future showing game moves on the right side of the board and maybe saving to pgn
-    moves = ['e4', 'e5', 'Nc3', 'Ne7', 'Nge2', 'Nbc6']  # write moves in order once
+    moves = ['e4', 'f5', 'exf5', 'g6', 'fxg6', 'Nf6', 'gxh7', 'Ng8', 'hxg8=N', 'e6', 'Nc3', 'd6', 'Nf6', 'Ke7', 'Nfe4', 'c6', 'Ng3', 'Rh7']  # write moves in order once
     for move in moves:
         board.make_move(move)
 
