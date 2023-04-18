@@ -2,6 +2,75 @@ global transition_dict
 global transition_dict1
 
 
+def count_coordinates(tab, move, num):
+    coordinates = {}
+    for piece in tab.keys():
+        if move in tab[piece]:
+            if piece.get_position()[num] in coordinates.keys():
+                a = coordinates[piece.get_position()[num]]
+                a += 1
+                coordinates[piece.get_position()[num]] = a
+            else:
+                coordinates[piece.get_position()[num]] = 1
+    return coordinates
+
+
+def rank_moves_and_coordinates(tab):
+    ranking = {}
+    for val in tab.values():
+        for move in val:
+            if move in ranking.keys():
+                a = ranking[move]
+                a += 1
+                ranking[move] = a
+            else:
+                ranking[move] = 1
+
+    good_moves = [i for i in ranking if ranking[i] == 1]
+    for i in good_moves:
+        if i in ranking.keys():
+            for piece in tab.keys():
+                if i in tab[piece]:
+                    tab[piece].pop(tab[piece].index(i))
+            del ranking[i]
+    return ranking, tab, good_moves
+
+
+def format_multiple_knight_moves(ranking, tab, good_moves, cap_switch):
+    for move in ranking.keys():
+        coordinates0 = count_coordinates(tab, move, 0)
+        coordinates1 = count_coordinates(tab, move, 1)
+
+        for piece in tab.keys():
+            x = piece.get_position()[0]
+            y = piece.get_position()[1]
+            if x in coordinates0.keys() and y in coordinates1.keys():
+                if cap_switch == 0:
+                    pmove = 'N'
+                elif cap_switch == 1:
+                    pmove = 'Nx'
+                if coordinates0[x] == 1:
+                    pmove = pmove + '{}{}{}'.format(get_chess_coordinates(y, x)[1], move[-2], move[-1])
+                elif coordinates1[y] == 1:
+                    pmove = pmove + '{}{}{}'.format(get_chess_coordinates(y, x)[0], move[-2], move[-1])
+                else:
+                    pmove = pmove + '{}{}{}{}'.format(get_chess_coordinates(y, x)[0],
+                                               get_chess_coordinates(y, x)[1], move[-2], move[-1])
+                good_moves.append(pmove)
+    return good_moves
+
+
+def pawn_promotion(color, desired_piece, coordinates):
+    promoted_pawn = Queen(coordinates, color)
+    if desired_piece == 'R':
+        promoted_pawn = Rook(coordinates, color)
+    elif desired_piece == 'B':
+        promoted_pawn = Bishop(coordinates, color)
+    elif desired_piece == 'N':
+        promoted_pawn = NKnight(coordinates, color)
+    return promoted_pawn
+
+
 class Board:
 
     def __init__(self, all_pieces):
@@ -146,16 +215,6 @@ class Board:
         self.set_flag()
         return 0
 
-    def pawn_promotion(self, color, desired_piece, coordinates):
-        promoted_pawn = Queen(coordinates, color)
-        if desired_piece == 'R':
-            promoted_pawn = Rook(coordinates, color)
-        elif desired_piece == 'B':
-            promoted_pawn = Bishop(coordinates, color)
-        elif desired_piece == 'N':
-            promoted_pawn = NKnight(coordinates, color)
-        return promoted_pawn
-
     def pawn_capture(self, coordinates, first_coor, move):
         move_flag = 0
         if self.get_flag() == 1:  # white to move
@@ -195,9 +254,9 @@ class Board:
                             move_flag = 1
 
                             if len(move) < 5:
-                                promoted_pawn = self.pawn_promotion('white', 'Q', coordinates)
+                                promoted_pawn = pawn_promotion('white', 'Q', coordinates)
                             else:
-                                promoted_pawn = self.pawn_promotion('white', move[5], coordinates)
+                                promoted_pawn = pawn_promotion('white', move[5], coordinates)
 
                             for i in range(8):
                                 if i not in self.white.keys():
@@ -214,9 +273,9 @@ class Board:
                             move_flag = 1
 
                             if len(move) < 5:
-                                promoted_pawn = self.pawn_promotion('black', 'Q', coordinates)
+                                promoted_pawn = pawn_promotion('black', 'Q', coordinates)
                             else:
-                                promoted_pawn = self.pawn_promotion('black', move[5], coordinates)
+                                promoted_pawn = pawn_promotion('black', move[5], coordinates)
 
                             for i in range(8):
                                 if i not in self.black.keys():
@@ -269,9 +328,9 @@ class Board:
                     if coordinates[0] == 7:  # white promotion
                         move_flag = 1
                         if len(move) < 3:
-                            promoted_pawn = self.pawn_promotion('white', 'Q', coordinates)
+                            promoted_pawn = pawn_promotion('white', 'Q', coordinates)
                         else:
-                            promoted_pawn = self.pawn_promotion('white', move[3], coordinates)
+                            promoted_pawn = pawn_promotion('white', move[3], coordinates)
 
                         for i in range(8):
                             if i not in self.white.keys():
@@ -285,9 +344,9 @@ class Board:
                     elif coordinates[0] == 0:  # black promotion
                         move_flag = 1
                         if len(move) < 3:
-                            promoted_pawn = self.pawn_promotion('white', 'Q', coordinates)
+                            promoted_pawn = pawn_promotion('white', 'Q', coordinates)
                         else:
-                            promoted_pawn = self.pawn_promotion('white', move[3], coordinates)
+                            promoted_pawn = pawn_promotion('white', move[3], coordinates)
 
                         for i in range(8, 16):
                             if i not in self.black.keys():
@@ -451,7 +510,7 @@ class Board:
                                 if row_change < 0:
                                     for i in range(1, abs(row_change)):
                                         if self.get_board()[piece.get_position()[0] + i][
-                                            piece.get_position()[1] + i] != 0:
+                                                piece.get_position()[1] + i] != 0:
                                             c += 1
                                     if c == 0:
                                         if move[2] == 'x':
@@ -462,7 +521,7 @@ class Board:
                                 else:
                                     for i in range(1, abs(row_change)):
                                         if self.get_board()[piece.get_position()[0] - i][
-                                            piece.get_position()[1] - i] != 0:
+                                                piece.get_position()[1] - i] != 0:
                                             c += 1
                                     if c == 0:
                                         if move[2] == 'x':
@@ -490,6 +549,9 @@ class Board:
                                             piece, move, coordinates, other_pieces_d, b)
                                     else:
                                         move_flag = self.normal_capture(piece, coordinates, other_pieces_d, b)
+        if move_flag == 0 and letter == 'B':
+            print(f'Nie możesz wykonać ruchu {move}.')
+            print(f'Zaproponuj inny ruch.')
         return move_flag
 
     def bishop_move(self, coordinates, move, letter):
@@ -553,6 +615,9 @@ class Board:
                                         piece, coordinates, move)
                                 else:
                                     move_flag = self.normal_move(piece, coordinates)
+        if move_flag == 0 and letter == 'B':
+            print(f'Nie możesz wykonać ruchu {move}.')
+            print(f'Zaproponuj inny ruch.')
         return move_flag
 
     def rook_capture(self, coordinates, move, letter):
@@ -629,6 +694,9 @@ class Board:
                                         piece, move, coordinates, other_pieces_d, b)
                                 else:
                                     move_flag = self.normal_capture(piece, coordinates, other_pieces_d, b)
+        if move_flag == 0 and letter == 'R':
+            print(f'Nie możesz wykonać ruchu {move}.')
+            print(f'Zaproponuj inny ruch.')
         return move_flag
 
     def rook_move(self, coordinates, move, letter):
@@ -697,6 +765,9 @@ class Board:
                                 move_flag = self.move_piece_from_adequate_square(piece, coordinates, move)
                             else:
                                 move_flag = self.normal_move(piece, coordinates)
+        if move_flag == 0 and letter == 'R':
+            print(f'Nie możesz wykonać ruchu {move}.')
+            print(f'Zaproponuj inny ruch.')
         return move_flag
 
     def king_capture(self, coordinates, move, king_moves):
@@ -762,6 +833,7 @@ class Board:
             print(f'Zaproponuj inny ruch.')
 
     def pawn_possible_moves(self, color):
+        piece_list = []
         if color == 'white':
             piece_list = self.white.values()
             a = 1
@@ -866,43 +938,59 @@ class Board:
     def knight_possible_moves(self, color):
         if color == 'white':
             piece_list = self.white.values()
+            color2 = 'b'
         else:
             piece_list = self.black.values()
+            color2 = 'w'
 
         knight_moves = [[-2, -1], [-2, 1], [-1, -2], [-1, 2], [1, 2], [1, -2], [2, 1], [2, -1]]
         tab = {}
-        moves = []
+        tab_caps = {}
 
         for piece in piece_list:  # moves forward
             if piece.get_name()[1] == 'N':
                 moves = []
-                for change in knight_moves:
-                    if 0 <= piece.get_position()[0]+change[0] <= 7 and 0 <= piece.get_position()[1]+change[1] <= 7 and\
-                            self.get_board()[piece.get_position()[0]+change[0]][piece.get_position()[1]+change[1]] == 0:
-                        move = '{}{}{}'.format(piece.get_name()[1],
-                                               get_chess_coordinates(
-                                            piece.get_position()[1]+change[1], piece.get_position()[0]+change[0])[0],
-                                            get_chess_coordinates(
-                                                piece.get_position()[1]+change[1], piece.get_position()[0]+change[0])[1])
-                        # print(move)  # if more than 1 knight can move to 1 square have to make table:
-                        moves.append(move)  # where it jumps from - how many knights f.e. g - 2 | 3 - 2 | c - 1 | 1 - 1 | and for knights that have unique value choose it, for others make both coordinates
-                tab[piece] = moves
+                captures = []
+                for change in knight_moves:  # every possible move without capture
+                    if 0 <= piece.get_position()[0]+change[0] <= 7 and 0 <= piece.get_position()[1]+change[1] <= 7:
+                        if self.get_board()[piece.get_position()[0]+change[0]][piece.get_position()[1]+change[1]] == 0:
+                            move = '{}{}{}'.format(piece.get_name()[1],
+                                                   get_chess_coordinates(
+                                                piece.get_position()[1]+change[1], piece.get_position()[0]+change[0])[0],
+                                                get_chess_coordinates(
+                                                    piece.get_position()[1]+change[1], piece.get_position()[0]+change[0])[1])
+                            moves.append(move)
+                        elif str(self.get_board()[piece.get_position()[0]+change[0]][piece.get_position()[1]+change[1]])[0] == color2:
+                            capture = '{}{}{}{}'.format('N', 'x', get_chess_coordinates(
+                                                piece.get_position()[1]+change[1], piece.get_position()[0]+change[0])[0],
+                                                        get_chess_coordinates(piece.get_position()[1] + change[1],
+                                                            piece.get_position()[0] + change[0])[1])
+                            captures.append(capture)
+                    tab[piece] = moves
+                    tab_caps[piece] = captures
 
-        ranking = {}
-        for val in tab.values():
-            for move in val:
-                if move in ranking.keys():
-                    a = ranking[move]
-                    a += 1
-                    ranking[move] = a
-                else:
-                    ranking[move] = 1
-        print(ranking)
-        return moves                        # also correct reading knights jumps if f.e. Ng3e2 cus rn it's only for Nge2
+        ranking, tab, good_moves = rank_moves_and_coordinates(tab)
+        cap_ranking, tab_caps, good_captures = rank_moves_and_coordinates(tab_caps)
+
+        good_moves = format_multiple_knight_moves(ranking, tab, good_moves, 0)
+        good_captures = format_multiple_knight_moves(cap_ranking, tab_caps, good_captures, 1)
+        for i in range(len(good_captures)):
+            good_moves.append(good_captures[i])
+
+        return good_moves                        # also correct reading knights jumps if f.e. Ng3e2 cus rn it's only for Nge2
 
     def check_moves(self):
-        moves = []
-        moves = self.pawn_possible_moves('white')
+        if self.get_flag() == 1:
+            m = self.pawn_possible_moves('white')
+            print(f'Possible pawn moves: ', end='')
+            print(*m, sep=', ')
+            mn = self.knight_possible_moves('white')
+            print(f'Possible knight moves: ', end='')
+            print(*mn, sep=', ')
+        # else:
+        #     m = self.pawn_possible_moves('black')
+        #     print(f'Possible pawn moves: ', end='')
+        #     print(*m, sep=', ')
 
     def make_move(self, move):
 
@@ -1000,17 +1088,7 @@ class Board:
             return 0
         self.set_pieces()
         self.update_board()
-
-        if self.get_flag() == 1:
-            m = self.pawn_possible_moves('white')
-            print(f'Possible pawn moves: ', end = '')
-            print(*m, sep = ', ')
-            mn = self.knight_possible_moves('white')
-            print(*mn, end = ' ,')
-        else:
-            m = self.pawn_possible_moves('black')
-            print(f'Possible pawn moves: ', end='')
-            print(*m, sep=', ')
+        self.check_moves()
 
     def update_board(self):
         board = [[0] * 8 for i in range(8)]
@@ -1165,7 +1243,8 @@ def print_hi(name):
     print(f'Hi, I am {name} \n')
     board = set_chessboard()
     board.sort_pieces()  # In future showing game moves on the right side of the board and maybe saving to pgn
-    moves = ['e4', 'f5', 'exf5', 'g6', 'fxg6', 'Nf6', 'gxh7', 'Ng8', 'hxg8=N', 'e6', 'Nc3', 'd6', 'Nf6', 'Ke7', 'Nfe4', 'c6', 'Ng3', 'Rh7']  # write moves in order once
+    moves = ['e4', 'f5', 'exf5', 'g6', 'fxg6', 'Nf6', 'gxh7', 'Ng8',
+             'hxg8=N', 'd6', 'Nf6', 'Kf7', 'Ne4', 'Bg4', 'Ng3', 'Be2', 'Nc3', 'Rh5']  # write moves in order once
     for move in moves:
         board.make_move(move)
 
