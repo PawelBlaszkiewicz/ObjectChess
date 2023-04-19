@@ -36,26 +36,24 @@ def rank_moves_and_coordinates(tab):
     return ranking, tab, good_moves
 
 
-def format_multiple_knight_moves(ranking, tab, good_moves, cap_switch):
+def format_multiple_moves(ranking, tab, good_moves, cap_switch, letter):
     for move in ranking.keys():
         coordinates0 = count_coordinates(tab, move, 0)
         coordinates1 = count_coordinates(tab, move, 1)
-
         for piece in tab.keys():
             x = piece.get_position()[0]
             y = piece.get_position()[1]
-            if x in coordinates0.keys() and y in coordinates1.keys():
-                if cap_switch == 0:
-                    pmove = 'N'
-                elif cap_switch == 1:
-                    pmove = 'Nx'
-                if coordinates0[x] == 1:
-                    pmove = pmove + '{}{}{}'.format(get_chess_coordinates(y, x)[1], move[-2], move[-1])
-                elif coordinates1[y] == 1:
-                    pmove = pmove + '{}{}{}'.format(get_chess_coordinates(y, x)[0], move[-2], move[-1])
+            if x in coordinates0.keys() and y in coordinates1.keys() and move in tab[piece]:
+                if coordinates1[y] == 1:
+                    pmove = letter + '{}'.format(get_chess_coordinates(y, x)[0])
+                elif coordinates0[x] == 1:
+                    pmove = letter + '{}'.format(get_chess_coordinates(y, x)[1])
                 else:
-                    pmove = pmove + '{}{}{}{}'.format(get_chess_coordinates(y, x)[0],
-                                               get_chess_coordinates(y, x)[1], move[-2], move[-1])
+                    pmove = letter + '{}{}'.format(get_chess_coordinates(y, x)[0],
+                                               get_chess_coordinates(y, x)[1])
+                if cap_switch == 1:
+                    pmove = pmove+'x'
+                pmove = pmove + move[-2] + move[-1]
                 good_moves.append(pmove)
     return good_moves
 
@@ -970,8 +968,8 @@ class Board:
         ranking, tab, good_moves = rank_moves_and_coordinates(tab)
         cap_ranking, tab_caps, good_captures = rank_moves_and_coordinates(tab_caps)
 
-        good_moves = format_multiple_knight_moves(ranking, tab, good_moves, 0)
-        good_captures = format_multiple_knight_moves(cap_ranking, tab_caps, good_captures, 1)
+        good_moves = format_multiple_moves(ranking, tab, good_moves, 0, 'N')
+        good_captures = format_multiple_moves(cap_ranking, tab_caps, good_captures, 1, 'N')
         for i in range(len(good_captures)):
             good_moves.append(good_captures[i])
 
@@ -985,17 +983,26 @@ class Board:
             piece_list = self.black.values()
             color2 = 'w'
 
-        a, b, tab, caps_tab = 1, 1, {}, {}
+        tab, caps_tab = {}, {}
         for piece in piece_list:
             moves, captures = [], []
             if piece.get_name()[1] == letter:
-                moves, captures = self.format_bishop_move(piece, 1, 1, 'B', moves, captures, color2)
-                moves, captures = self.format_bishop_move(piece, 1, -1, 'B', moves, captures, color2)
-                moves, captures = self.format_bishop_move(piece, -1, -1, 'B', moves, captures, color2)
-                moves, captures = self.format_bishop_move(piece, -1, 1, 'B', moves, captures, color2)
+                moves, captures = self.format_bishop_move(piece, 1, 1, letter, moves, captures, color2)
+                moves, captures = self.format_bishop_move(piece, 1, -1, letter, moves, captures, color2)
+                moves, captures = self.format_bishop_move(piece, -1, -1, letter, moves, captures, color2)
+                moves, captures = self.format_bishop_move(piece, -1, 1, letter, moves, captures, color2)
                 tab[piece] = moves
                 caps_tab[piece] = captures
-        print(tab.values())
+
+        ranking, tab, good_moves = rank_moves_and_coordinates(tab)
+        cap_ranking, caps_tab, good_captures = rank_moves_and_coordinates(caps_tab)
+
+        good_moves = format_multiple_moves(ranking, tab, good_moves, 0, letter)
+        good_captures = format_multiple_moves(cap_ranking, caps_tab, good_captures, 1, letter)
+        for i in range(len(good_captures)):
+            good_moves.append(good_captures[i])
+
+        return good_moves
 
     def format_bishop_move(self, piece, a, b, letter, moves, captures, color2):
         while 0 <= piece.get_position()[0] + a <= 7 and 0 <= piece.get_position()[1] + b <= 7 and \
@@ -1022,6 +1029,100 @@ class Board:
             captures.append(capture)
         return moves, captures
 
+    def rook_possible_moves(self, color, letter):
+        if color == 'white':
+            piece_list = self.white.values()
+            color2 = 'b'
+        else:
+            piece_list = self.black.values()
+            color2 = 'w'
+
+        tab, caps_tab = {}, {}
+        for piece in piece_list:
+            moves, captures = [], []
+            if piece.get_name()[1] == letter:
+                moves, captures = self.format_rook_move(piece, 1, 1, letter, moves, captures, color2)
+                moves, captures = self.format_rook_move(piece, -1, -1, letter, moves, captures, color2)
+                tab[piece] = moves
+                caps_tab[piece] = captures
+
+        ranking, tab, good_moves = rank_moves_and_coordinates(tab)
+        cap_ranking, caps_tab, good_captures = rank_moves_and_coordinates(caps_tab)
+
+        good_moves = format_multiple_moves(ranking, tab, good_moves, 0, letter)
+        good_captures = format_multiple_moves(cap_ranking, caps_tab, good_captures, 1, letter)
+        for i in range(len(good_captures)):
+            good_moves.append(good_captures[i])
+
+        return good_moves
+
+    def format_rook_move(self, piece, a, b, letter, moves, captures, color2):
+        while 0 <= piece.get_position()[0] + a <= 7 and \
+                self.get_board()[piece.get_position()[0] + a][piece.get_position()[1]] == 0:
+            move = '{}{}{}'.format(letter, get_chess_coordinates(piece.get_position()[1],
+                                                                 piece.get_position()[0] + a)[0],
+                                   get_chess_coordinates(piece.get_position()[1], piece.get_position()[0] + a)[1])
+            moves.append(move)
+            if a > 0:
+                a += 1
+            else:
+                a -= 1
+        if 0 <= piece.get_position()[0] + a <= 7 and \
+                str(self.get_board()[piece.get_position()[0]+a][piece.get_position()[1]])[0] == color2:
+            capture = '{}{}{}{}'.format(letter, 'x', get_chess_coordinates(piece.get_position()[1],
+                                                                           piece.get_position()[0]+a)[0],
+                                        get_chess_coordinates(piece.get_position()[1], piece.get_position()[0]+a)[1])
+            captures.append(capture)
+
+        while 0 <= piece.get_position()[1] + b <= 7 and \
+                self.get_board()[piece.get_position()[0]][piece.get_position()[1]+b] == 0:
+            move = '{}{}{}'.format(letter, get_chess_coordinates(piece.get_position()[1]+b,
+                                                                piece.get_position()[0])[0],
+                                get_chess_coordinates(piece.get_position()[1]+b, piece.get_position()[0])[1])
+            moves.append(move)
+            if b > 0:
+                b += 1
+            else:
+                b -= 1
+        if 0 <= piece.get_position()[1] + b <= 7 and \
+                str(self.get_board()[piece.get_position()[0]][piece.get_position()[1]+b])[0] == color2:
+            capture = '{}{}{}{}'.format(letter, 'x', get_chess_coordinates(piece.get_position()[1] + b,
+                                                                 piece.get_position()[0])[0],
+                                   get_chess_coordinates(piece.get_position()[1] + b, piece.get_position()[0])[1])
+            captures.append(capture)
+        return moves, captures
+
+    def queen_possible_moves(self, color, letter):
+        if color == 'white':
+            piece_list = self.white.values()
+            color2 = 'b'
+        else:
+            piece_list = self.black.values()
+            color2 = 'w'
+
+        tab, caps_tab = {}, {}
+        for piece in piece_list:
+            moves, captures = [], []
+            if piece.get_name()[1] == letter:
+                moves, captures = self.format_bishop_move(piece, 1, 1, letter, moves, captures, color2)
+                moves, captures = self.format_bishop_move(piece, 1, -1, letter, moves, captures, color2)
+                moves, captures = self.format_bishop_move(piece, -1, -1, letter, moves, captures, color2)
+                moves, captures = self.format_bishop_move(piece, -1, 1, letter, moves, captures, color2)
+                moves, captures = self.format_rook_move(piece, 1, 1, letter, moves, captures, color2)
+                moves, captures = self.format_rook_move(piece, -1, -1, letter, moves, captures, color2)
+                tab[piece] = moves
+                caps_tab[piece] = captures
+
+        ranking, tab, good_moves = rank_moves_and_coordinates(tab)
+        cap_ranking, caps_tab, good_captures = rank_moves_and_coordinates(caps_tab)
+
+        good_moves = format_multiple_moves(ranking, tab, good_moves, 0, letter)
+        good_captures = format_multiple_moves(cap_ranking, caps_tab, good_captures, 1, letter)
+        for i in range(len(good_captures)):
+            good_moves.append(good_captures[i])
+
+        return good_moves
+
     def check_moves(self):
         if self.get_flag() == 1:
             # m = self.pawn_possible_moves('white')
@@ -1030,7 +1131,15 @@ class Board:
             # mn = self.knight_possible_moves('white')
             # print(f'Possible knight moves: ', end='')
             # print(*mn, sep=', ')
-            self.bishop_possible_moves('white', 'B')
+            # mb = self.bishop_possible_moves('white', 'B')
+            # print(f'Possible bishop moves: ', end='')
+            # print(*mb, sep=', ')
+            # mr = self.rook_possible_moves('white', 'R')
+            # print(f'Possible rook moves: ', end='')
+            # print(*mr, sep=', ')
+            mq = self.queen_possible_moves('white', 'Q')
+            print(f'Possible queen moves: ', end='')
+            print(*mq, sep=', ')
         # else:
         #     m = self.pawn_possible_moves('black')
         #     print(f'Possible pawn moves: ', end='')
@@ -1152,6 +1261,7 @@ class Piece:
         self.__color = color
         self.__value = val
         self.__prev_position = []
+        self.__possible_moves = []
 
     def get_name(self):
         return self.__color[0] + self.__name[0]
@@ -1176,45 +1286,36 @@ class Pawn(Piece):
 
     def __init__(self, position, color):
         super().__init__(__class__.__name__, position, color, 1)
-        self.__possible_moves = []
-
-    def promotion(self):
-        return 0
 
 
 class Bishop(Piece):
 
     def __init__(self, position, color):
         super().__init__(__class__.__name__, position, color, 3)
-        self.__possible_moves = []
 
 
 class NKnight(Piece):
 
     def __init__(self, position, color):
         super().__init__(__class__.__name__, position, color, 3)
-        self.__possible_moves = []
 
 
 class Rook(Piece):
 
     def __init__(self, position, color):
         super().__init__(__class__.__name__, position, color, 5)
-        self.__possible_moves = []
 
 
 class Queen(Piece):
 
     def __init__(self, position, color):
         super().__init__(__class__.__name__, position, color, 9)
-        self.__possible_moves = []
 
 
 class King(Piece):
 
     def __init__(self, position, color):
         super().__init__(__class__.__name__, position, color, 0)
-        self.__possible_moves = []
 
 
 def show(piece):  # działa dobrze
@@ -1290,14 +1391,39 @@ def knight_possibilities_test(board):
         board.make_move(move)
 
 
+def bishop_possibilities_test(board):
+    moves = ['d4', 'e5', 'dxe5', 'f6', 'exf6', 'Bd6', 'fxg7', 'Bf8',
+             'gxh8=B', 'h5', 'g4', 'Bg7', 'gxh5', 'Bf8', 'Bd4', 'Nf6',
+             'h6', 'Ng8', 'h7', 'Nf6', 'h8=B', 'Ng8', 'Bhf6', 'Nc6',
+             'Bc5', 'Qe7', 'Bfg5', 'Qe3']
+    for move in moves:
+        board.make_move(move)
+
+
+def rook_possibilities_test(board):
+    moves = ['h4', 'g5', 'hxg5', 'h6', 'gxh6', 'Bg7', 'hxg7', 'Nf6', 'a4', 'd6',
+             'gxh8=R', 'Kd7', 'Ra3', 'Nc6']  # write moves in order once
+    for move in moves:
+        board.make_move(move)
+
+
+def queen_possibilities_test(board):
+    moves = ['e4', 'f5', 'exf5', 'g6', 'fxg6', 'Nf6', 'gxh7', 'Ng8',
+             'hxg8', 'b6', 'd4', 'e5', 'dxe5', 'Qe7', 'Qgd5', 'Nc6',
+             'h4', 'Nb8', 'h5', 'Nc6', 'h6', 'Nb8', 'h7', 'Rg8',
+             'hxg8=Q', 'Nc6', 'Qh7', 'Bg7', 'Qhh5', 'Kd8', 'a4', 'Nd4', 'b3', 'Nf3']  # write moves in order once
+    for move in moves:
+        board.make_move(move)
+
+
 def print_hi(name):
     print(f'Hi, I am {name} \n')
     board = set_chessboard()
     board.sort_pieces()  # In future showing game moves on the right side of the board and maybe saving to pgn
-    moves = ['d4', 'e5', 'dxe5', 'f6', 'exf6', 'Bd6', 'fxg7', 'Bf8',
-             'gxh8=B', 'h5', 'g4', 'Bg7', 'gxh5', 'Bf8', 'Bd4', 'Nf6',
-             'h6', 'Ng8', 'h7', 'Nf6', 'h8=B', 'Ng8', 'Bhf6', 'Nc6',
-             'Bc5', 'Rb8', 'Bfg5', 'a6']  # write moves in order once
+    moves = ['e4', 'f5', 'exf5', 'g6', 'fxg6', 'Nf6', 'gxh7', 'Ng8',
+             'hxg8', 'b6', 'd4', 'e5', 'dxe5', 'Qe7', 'Qgd5', 'Nc6',
+             'h4', 'Nb8', 'h5', 'Nc6', 'h6', 'Nb8', 'h7', 'Rg8',
+             'hxg8=Q', 'Nc6', 'Qh7', 'Bg7', 'Qhh5', 'Kd8', 'a4', 'Nd4', 'b3', 'Nf3']  # write moves in order once
     for move in moves:
         board.make_move(move)
 
