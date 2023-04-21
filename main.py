@@ -1,3 +1,4 @@
+import copy, time
 global transition_dict
 global transition_dict1
 
@@ -66,7 +67,8 @@ class Board:
         self.white = {}
         self.black = {}
         self.__flag = 1
-        self.__possible_moves = []
+        self.__possible_moves1 = []
+        self.__possible_moves2 = []
 
     def get_pieces(self):
         return self._pieces
@@ -78,7 +80,7 @@ class Board:
         return self.__flag
 
     def get_moves(self):
-        return self.__possible_moves
+        return [self.__possible_moves1, self.__possible_moves2]
 
     def set_flag(self):
         if self.__flag == 1:
@@ -87,11 +89,14 @@ class Board:
             self.__flag = 1
 
     def set_board(self, board):
-
         self.__board = board
 
-    def add_moves(self, moves):
-        self.__possible_moves.append(moves)
+    def set_all_moves(self, moves1, moves2):
+        self.__possible_moves1 = moves1
+        self.__possible_moves2 = moves2
+
+    def set_legal_moves(self, moves):
+        self.__possible_moves1 = moves
 
     def set_pieces(self):
         self._pieces.clear()
@@ -243,7 +248,6 @@ class Board:
                         else:
                             self.move_black_piece(piece, coordinates)
 
-                    print("En passant, kmiocie!")
                     break
                 else:  # normal capture
                     b = [i for i in other_pieces_d if other_pieces_d[i].get_position() == coordinates]
@@ -292,7 +296,6 @@ class Board:
                             self.move_black_piece(piece, coordinates)
                             del other_pieces_d[b[0]]  # delete captured piece from dict
                             move_flag = 1
-                        print('he ATTACK!')
                         break
         if move_flag == 0:
             print(f'Nie możesz wykonać bicia {move}.')
@@ -452,8 +455,6 @@ class Board:
         if move_flag == 0:
             print(f'Nie możesz wykonać bicia {move}.')
             print(f'Zaproponuj inny ruch.')
-        else:
-            print('he JUMP and ATTACK!')
 
     def knight_move(self, coordinates, move, knight_moves):
         move_flag = 0
@@ -475,8 +476,6 @@ class Board:
         if move_flag == 0:
             print(f'Nie możesz wykonać ruchu {move}.')
             print(f'Zaproponuj inny ruch.')
-        else:
-            print('he JUMP!')
 
     def bishop_capture(self, coordinates, move, letter):
         move_flag = 0
@@ -1123,125 +1122,168 @@ class Board:
 
         return good_moves
 
-    def check_moves(self):
+    def print_moves(self, color):
+        m = self.pawn_possible_moves(color)
+        print(f'Possible pawn moves: ', end='')
+        print(*m, sep=', ')
+        mn = self.knight_possible_moves(color)
+        print(f'Possible knight moves: ', end='')
+        print(*mn, sep=', ')
+        mb = self.bishop_possible_moves(color, 'B')
+        print(f'Possible bishop moves: ', end='')
+        print(*mb, sep=', ')
+        mr = self.rook_possible_moves(color, 'R')
+        print(f'Possible rook moves: ', end='')
+        print(*mr, sep=', ')
+        mq = self.queen_possible_moves(color, 'Q')
+        print(f'Possible queen moves: ', end='')
+        print(*mq, sep=', ')
+
+    def all_moves(self):
+        m = self.pawn_possible_moves('white')
+        mn = self.knight_possible_moves('white')
+        mb = self.bishop_possible_moves('white', 'B')
+        mr = self.rook_possible_moves('white', 'R')
+        mq = self.queen_possible_moves('white', 'Q')
+        m = m + mn + mb + mr + mq
+        b = self.pawn_possible_moves('black')
+        bn = self.knight_possible_moves('black')
+        bb = self.bishop_possible_moves('black', 'B')
+        br = self.rook_possible_moves('black', 'R')
+        bq = self.queen_possible_moves('black', 'Q')
+        b = b + bn + bb + br + bq
         if self.get_flag() == 1:
-            # m = self.pawn_possible_moves('white')
-            # print(f'Possible pawn moves: ', end='')
-            # print(*m, sep=', ')
-            # mn = self.knight_possible_moves('white')
-            # print(f'Possible knight moves: ', end='')
-            # print(*mn, sep=', ')
-            # mb = self.bishop_possible_moves('white', 'B')
-            # print(f'Possible bishop moves: ', end='')
-            # print(*mb, sep=', ')
-            # mr = self.rook_possible_moves('white', 'R')
-            # print(f'Possible rook moves: ', end='')
-            # print(*mr, sep=', ')
-            mq = self.queen_possible_moves('white', 'Q')
-            print(f'Possible queen moves: ', end='')
-            print(*mq, sep=', ')
-        # else:
-        #     m = self.pawn_possible_moves('black')
-        #     print(f'Possible pawn moves: ', end='')
-        #     print(*m, sep=', ')
+            self.set_all_moves(m, b)
+        else:
+            self.set_all_moves(b, m)
+
+    def checks(self):
+        a = 0
+        self.all_moves()
+        moves1 = self.get_moves()[0]
+        moves2 = self.get_moves()[1]
+        if self.get_flag() == 1:
+            king = [i for i in self.white if self.white[i].get_name()[1] == 'K']
+            king = self.white[king[0]]
+        else:
+            king = [i for i in self.black if self.black[i].get_name()[1] == 'K']
+            king = self.black[king[0]]
+        x = king.get_position()
+
+        checks = []
+        for move in moves2:
+            if move[-2] != '=':
+                coordinates = get_board_list_coordinates(move[-2], move[-1])
+                coordinates.reverse()
+                if x == coordinates:
+                    checks.append(move)
+                    a += 1
+                    print('Checkers, man...')
+        shield_moves = []
+        if len(checks) > 0:
+            for move1 in moves1:
+                board_copy = copy.deepcopy(self)
+                board_copy.make_move(move1)
+                board_copy.update_board()
+
+                board_copy.all_moves()
+                moves2 = board_copy.get_moves()[0]
+                if checks[0] not in moves2:
+                    shield_moves.append(move1)
+
+        return shield_moves, a
 
     def make_move(self, move):
+        if move in self.get_moves()[0]:
+            if move[0].isupper() is True:
+                if move[0] == 'N':  # Knight
+                    knight_moves = [[-2, -1], [-2, 1], [-1, -2], [-1, 2], [1, 2], [1, -2], [2, 1], [2, -1]]
+                    if move[1] == 'x' or move[2] == 'x':
+                        coordinates = get_board_list_coordinates(move[-2], move[-1])
+                        coordinates.reverse()
 
-        print("\n")
-        print(f'Soldier! Order from your commander: {move}!')
-        if move[0].isupper() is True:
-            if move[0] == 'N':  # Knight
-                knight_moves = [[-2, -1], [-2, 1], [-1, -2], [-1, 2], [1, 2], [1, -2], [2, 1], [2, -1]]
-                if move[1] == 'x' or move[2] == 'x':
-                    coordinates = get_board_list_coordinates(move[-2], move[-1])
-                    coordinates.reverse()
+                        self.knight_capture(coordinates, move, knight_moves)
 
-                    self.knight_capture(coordinates, move, knight_moves)
+                    else:
+                        coordinates = get_board_list_coordinates(move[-2], move[-1])
+                        coordinates.reverse()
 
-                else:
-                    coordinates = get_board_list_coordinates(move[-2], move[-1])
-                    coordinates.reverse()
+                        self.knight_move(coordinates, move, knight_moves)
+                elif move[0] == 'B':  # Bishop
+                    if move[1] == 'x' or move[2] == 'x':
+                        coordinates = get_board_list_coordinates(move[-2], move[-1])
+                        coordinates.reverse()
 
-                    self.knight_move(coordinates, move, knight_moves)
-            elif move[0] == 'B':  # Bishop
-                if move[1] == 'x' or move[2] == 'x':
-                    coordinates = get_board_list_coordinates(move[-2], move[-1])
-                    coordinates.reverse()
+                        self.bishop_capture(coordinates, move, "B")
+                    else:
+                        coordinates = get_board_list_coordinates(move[-2], move[-1])
+                        coordinates.reverse()
 
-                    self.bishop_capture(coordinates, move, "B")
-                else:
-                    coordinates = get_board_list_coordinates(move[-2], move[-1])
-                    coordinates.reverse()
+                        self.bishop_move(coordinates, move, "B")
+                elif move[0] == 'R':  # Rook
+                    if move[1] == 'x' or move[2] == 'x':
+                        coordinates = get_board_list_coordinates(move[-2], move[-1])
+                        coordinates.reverse()
 
-                    self.bishop_move(coordinates, move, "B")
-            elif move[0] == 'R':  # Rook
-                if move[1] == 'x' or move[2] == 'x':
-                    coordinates = get_board_list_coordinates(move[-2], move[-1])
-                    coordinates.reverse()
+                        self.rook_capture(coordinates, move, "R")
+                    else:
+                        coordinates = get_board_list_coordinates(move[-2], move[-1])
+                        coordinates.reverse()
 
-                    self.rook_capture(coordinates, move, "R")
-                else:
-                    coordinates = get_board_list_coordinates(move[-2], move[-1])
-                    coordinates.reverse()
+                        self.rook_move(coordinates, move, "R")
+                elif move[0] == 'Q':
+                    move_flag = 0
+                    if move[1] == 'x' or move[2] == 'x':
+                        coordinates = get_board_list_coordinates(move[-2], move[-1])
+                        coordinates.reverse()
 
-                    self.rook_move(coordinates, move, "R")
-            elif move[0] == 'Q':
-                move_flag = 0
-                if move[1] == 'x' or move[2] == 'x':
-                    coordinates = get_board_list_coordinates(move[-2], move[-1])
-                    coordinates.reverse()
+                        if move_flag == 0:
+                            move_flag = self.bishop_capture(coordinates, move, "Q")
+                        if move_flag == 0:
+                            move_flag = self.rook_capture(coordinates, move, "Q")
+                    else:
+                        coordinates = get_board_list_coordinates(move[-2], move[-1])
+                        coordinates.reverse()
 
+                        if move_flag == 0:
+                            move_flag = self.bishop_move(coordinates, move, "Q")
+                        if move_flag == 0:
+                            move_flag = self.rook_move(coordinates, move, "Q")
                     if move_flag == 0:
-                        move_flag = self.bishop_capture(coordinates, move, "Q")
-                    if move_flag == 0:
-                        move_flag = self.rook_capture(coordinates, move, "Q")
-                else:
-                    coordinates = get_board_list_coordinates(move[-2], move[-1])
+                        print(f'Nie możesz wykonać ruchu {move}.')
+                        print(f'Zaproponuj inny ruch.')
+                elif move[0] == 'K':
+                    king_moves = [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, 1], [1, 0], [1, -1]]
+                    if move[1] == 'x' or move[2] == 'x':
+                        coordinates = get_board_list_coordinates(move[-2], move[-1])
+                        coordinates.reverse()
+
+                        self.king_capture(coordinates, move, king_moves)
+
+                    else:
+                        coordinates = get_board_list_coordinates(move[-2], move[-1])
+                        coordinates.reverse()
+
+                        self.king_move(coordinates, move, king_moves)
+                elif move[0] == 'O':
+                    self.castles(move)
+
+            elif move[0].islower() is True:  # pawns
+                if move[1] == 'x':  # capture
+                    coordinates = get_board_list_coordinates(move[2], move[3])
+                    coordinates.reverse()
+                    first_coor = get_board_list_coordinates(move[0], 1)
+                    first_coor.reverse()
+
+                    self.pawn_capture(coordinates, first_coor, move)
+
+                else:  # just pawn move
+                    coordinates = get_board_list_coordinates(move[0], move[1])
                     coordinates.reverse()
 
-                    if move_flag == 0:
-                        move_flag = self.bishop_move(coordinates, move, "Q")
-                    if move_flag == 0:
-                        move_flag = self.rook_move(coordinates, move, "Q")
-                if move_flag == 0:
-                    print(f'Nie możesz wykonać ruchu {move}.')
-                    print(f'Zaproponuj inny ruch.')
-            elif move[0] == 'K':
-                king_moves = [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, 1], [1, 0], [1, -1]]
-                if move[1] == 'x' or move[2] == 'x':
-                    coordinates = get_board_list_coordinates(move[-2], move[-1])
-                    coordinates.reverse()
-
-                    self.king_capture(coordinates, move, king_moves)
-
-                else:
-                    coordinates = get_board_list_coordinates(move[-2], move[-1])
-                    coordinates.reverse()
-
-                    self.king_move(coordinates, move, king_moves)
-            elif move[0] == 'O':
-                self.castles(move)
-
-        elif move[0].islower() is True:  # pawns
-            if move[1] == 'x':  # capture
-                coordinates = get_board_list_coordinates(move[2], move[3])
-                coordinates.reverse()
-                first_coor = get_board_list_coordinates(move[0], 1)
-                first_coor.reverse()
-
-                self.pawn_capture(coordinates, first_coor, move)
-
-            else:  # just pawn move
-                coordinates = get_board_list_coordinates(move[0], move[1])
-                coordinates.reverse()
-
-                self.pawn_move(coordinates, move)
+                    self.pawn_move(coordinates, move)
         else:
-            print("Wrong command!!1!")
-            return 0
-        self.set_pieces()
-        self.update_board()
-        self.check_moves()
+            print(f'You can\'t make that move!')
 
     def update_board(self):
         board = [[0] * 8 for i in range(8)]
@@ -1250,7 +1292,30 @@ class Board:
         for piece in self.black.values():
             board[piece.get_position()[0]][piece.get_position()[1]] = piece.get_name()
         self.set_board(board)
+
+    def if_checks(self):
+        self.all_moves()
+        shield, if_checked = self.checks()
+        if if_checked > 0:
+            legal_moves = [i for i in shield if i in self.get_moves()[0]]
+        else:
+            legal_moves = self.get_moves()[0]
+        print(legal_moves)
+        self.set_legal_moves(legal_moves)
+
+    def play_game(self, move):
+        print("\n")
+        self.if_checks()
+        print("\n")
+        print(f'Soldier! Order from your commander: {move}!')
+        self.make_move(move)
+        self.set_pieces()
+        self.update_board()
         self.show_board()
+
+        # if len(shield) > 0:
+        #     print(f'only moves: {shield}')
+        # self.set_all_moves(self.get_moves()[self.get_flag()], shield)
 
 
 class Piece:
@@ -1358,37 +1423,11 @@ def set_chessboard():
     return board
 
 
-def short_castles_test(board):
-    board.make_move("e4")
-    board.make_move("e5")
-    board.make_move("Bc4")
-    board.make_move("Be7")
-    board.make_move("Nf3")
-    board.make_move("Nf6")
-    board.make_move("O-O")
-    board.make_move("O-O")
-
-
-def long_castles_test(board):
-    board.make_move("e4")
-    board.make_move("e5")
-    board.make_move("Qe2")
-    board.make_move("Nc6")
-    board.make_move("Nc3")
-    board.make_move("b6")
-    board.make_move("b3")
-    board.make_move("Bb7")
-    board.make_move("Bb2")
-    board.make_move("Qh4")
-    board.make_move("O-O-O")
-    board.make_move("O-O-O")
-
-
 def knight_possibilities_test(board):
     moves = ['e4', 'f5', 'exf5', 'g6', 'fxg6', 'Nf6', 'gxh7', 'Ng8',
              'hxg8=N', 'd6', 'Nf6', 'Kf7', 'Ne4', 'Bg4', 'Ng3', 'Be2', 'Nc3', 'Rh5']  # write moves in order once
     for move in moves:
-        board.make_move(move)
+        board.play_game(move)
 
 
 def bishop_possibilities_test(board):
@@ -1397,14 +1436,14 @@ def bishop_possibilities_test(board):
              'h6', 'Ng8', 'h7', 'Nf6', 'h8=B', 'Ng8', 'Bhf6', 'Nc6',
              'Bc5', 'Qe7', 'Bfg5', 'Qe3']
     for move in moves:
-        board.make_move(move)
+        board.play_game(move)
 
 
 def rook_possibilities_test(board):
     moves = ['h4', 'g5', 'hxg5', 'h6', 'gxh6', 'Bg7', 'hxg7', 'Nf6', 'a4', 'd6',
              'gxh8=R', 'Kd7', 'Ra3', 'Nc6']  # write moves in order once
     for move in moves:
-        board.make_move(move)
+        board.play_game(move)
 
 
 def queen_possibilities_test(board):
@@ -1420,12 +1459,9 @@ def print_hi(name):
     print(f'Hi, I am {name} \n')
     board = set_chessboard()
     board.sort_pieces()  # In future showing game moves on the right side of the board and maybe saving to pgn
-    moves = ['e4', 'f5', 'exf5', 'g6', 'fxg6', 'Nf6', 'gxh7', 'Ng8',
-             'hxg8', 'b6', 'd4', 'e5', 'dxe5', 'Qe7', 'Qgd5', 'Nc6',
-             'h4', 'Nb8', 'h5', 'Nc6', 'h6', 'Nb8', 'h7', 'Rg8',
-             'hxg8=Q', 'Nc6', 'Qh7', 'Bg7', 'Qhh5', 'Kd8', 'a4', 'Nd4', 'b3', 'Nf3']  # write moves in order once
+    moves = ['e4', 'f5', 'exf5', 'g6', 'fxg6', 'Nf6', 'gxh7', 'Ng8', 'a3', 'Rxh7', 'a4', 'Nf6', 'Qh5']  # write moves in order once
     for move in moves:
-        board.make_move(move)
+        board.play_game(move)
 
     # c = str(input())  #write moves in console
     # moves = c.split(',')
@@ -1447,8 +1483,9 @@ def print_hi(name):
     # board.make_move("Ndxe4")
     # board.make_move("0-0")
     for i in range(10):  # write 1 move at a time in console
+        board.if_checks()
         i = str(input())
-        board.make_move(i)
+        board.play_game(i)
     # for piece in board.get_pieces().values():
     #     if piece.get_name()[1] == 'P':
     #         print(piece.get_name(), piece.get_position())
