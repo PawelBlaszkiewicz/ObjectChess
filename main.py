@@ -1,4 +1,5 @@
 import copy, time
+
 global transition_dict
 global transition_dict1
 
@@ -51,12 +52,59 @@ def format_multiple_moves(ranking, tab, good_moves, cap_switch, letter):
                     pmove = letter + '{}'.format(get_chess_coordinates(y, x)[1])
                 else:
                     pmove = letter + '{}{}'.format(get_chess_coordinates(y, x)[0],
-                                               get_chess_coordinates(y, x)[1])
+                                                   get_chess_coordinates(y, x)[1])
                 if cap_switch == 1:
-                    pmove = pmove+'x'
+                    pmove = pmove + 'x'
                 pmove = pmove + move[-2] + move[-1]
                 good_moves.append(pmove)
     return good_moves
+
+
+class Game:
+    def __init__(self):
+        self.board = Board([])
+        self.evaluation = float(0)
+        self.winner = 0
+        self.prep_game()
+
+    def get_winner(self):
+        return self.winner
+
+    def evaluate(self):
+        self.evaluation = float(0)
+        pieces = self.board.get_pieces().values()
+        for piece in pieces:
+            value = piece.get_value()
+            if piece.get_name()[0] == 'w':
+                self.evaluation = self.evaluation + value
+            else:
+                self.evaluation = self.evaluation - value
+
+    def prep_game(self):
+        self.board = set_chessboard()
+        self.board.sort_pieces()
+
+    def lets_play(self, move):
+        mated = self.board.play_game(move)
+        if mated == 1:
+            self.win('black')
+        elif mated == 0:
+            self.win('white')
+        elif mated == 0.5:
+            self.win('stalemate')
+        self.evaluate()
+
+    def win(self, color):
+        if color == 'white':
+            self.winner = 1
+        elif color == 'black':
+            self.winner = -1
+        elif color == 'stalemate':
+            self.winner = 0.5
+        if self.winner in [-1, 1]:
+            print(f'Brawo! Gracz {color} wygrał partię!')
+        elif self.winner == 0.5:
+            print(f'Remis!')
 
 
 class Board:
@@ -237,7 +285,7 @@ class Board:
                     b = [i for i in other_pieces_d if other_pieces_d[i].get_position() ==
                          [coordinates[0] + a, coordinates[1]] and other_pieces_d[i].get_name()[1] == 'P']
 
-                    if len(b) > 0 and len(other_pieces_d[b[0]].get_prev_position()) > 0 and\
+                    if len(b) > 0 and len(other_pieces_d[b[0]].get_prev_position()) > 0 and \
                             other_pieces_d[b[0]].get_prev_position()[0] == \
                             other_pieces_d[b[0]].get_position()[0] - a - a:
 
@@ -515,8 +563,8 @@ class Board:
                                             move_flag = self.normal_capture(piece, coordinates, other_pieces_d, b)
                                 else:
                                     for i in range(1, abs(row_change)):
-                                        if self.get_board()[piece.get_position()[0] - i][
-                                                piece.get_position()[1] - i] != 0:
+                                        if self.get_board()[
+                                                piece.get_position()[0] - i][piece.get_position()[1] - i] != 0:
                                             c += 1
                                     if c == 0:
                                         if move[2] == 'x':
@@ -828,7 +876,7 @@ class Board:
             print(f'Zaproponuj inny ruch.')
 
     def pawn_possible_moves(self, color):
-        piece_list,a = [], int()
+        piece_list, a = [], int()
         if color == 'white':
             piece_list = self.white.values()
             a = 1
@@ -851,7 +899,8 @@ class Board:
                                              get_chess_coordinates(piece.get_position()[1], piece.get_position()[0])[
                                                  1] + a + a)
                         moves.append(move)
-                if piece.get_position()[0] + a in [0, 7]:  # promotion
+                if piece.get_position()[0] + a in [0, 7] and \
+                        self.get_board()[piece.get_position()[0] + a][piece.get_position()[1]] == 0:  # promotion
                     for letter in ['Q', 'R', 'B', 'N']:
                         move = '{}{}{}{}'.format(get_chess_coordinates(piece.get_position()[1],
                                                                        piece.get_position()[0])[0],
@@ -901,11 +950,13 @@ class Board:
                                                                piece.get_position()[0] + a)[1])
                 moves.append(move)
             elif piece.get_position()[0] == 4 and color1 == 'w' and \
-                    str(self.get_board()[piece.get_position()[0]][piece.get_position()[1] + b])[0] == color2:  # check if en passant
+                    str(self.get_board()[piece.get_position()[0]][piece.get_position()[1] + b])[
+                        0] == color2:  # check if en passant
                 other_pawn = [i for i in self.black if self.black[i].get_name()[1] == 'P'
-                     and self.black[i].get_position() == [piece.get_position()[0], piece.get_position()[1] + b]]
+                              and self.black[i].get_position() == [piece.get_position()[0],
+                                                                   piece.get_position()[1] + b]]
 
-                if len(other_pawn) > 0 and len(self.black[other_pawn[0]].get_prev_position()) > 0 and\
+                if len(other_pawn) > 0 and len(self.black[other_pawn[0]].get_prev_position()) > 0 and \
                         self.black[other_pawn[0]].get_prev_position()[0] == \
                         self.black[other_pawn[0]].get_position()[0] + a + a:
                     move = '{}{}{}{}'.format(get_chess_coordinates(piece.get_position()[1],
@@ -916,9 +967,11 @@ class Board:
                                                                    piece.get_position()[0] + a)[1])
                     moves.append(move)
             elif piece.get_position()[0] == 3 and color1 == 'b' and \
-                    str(self.get_board()[piece.get_position()[0]][piece.get_position()[1] + b])[0] == color2:  # check if en passant
+                    str(self.get_board()[piece.get_position()[0]][piece.get_position()[1] + b])[
+                        0] == color2:  # check if en passant
                 other_pawn = [i for i in self.white if self.white[i].get_name()[1] == 'P'
-                     and self.white[i].get_position() == [piece.get_position()[0], piece.get_position()[1] + b]]
+                              and self.white[i].get_position() == [piece.get_position()[0],
+                                                                   piece.get_position()[1] + b]]
                 if len(other_pawn) > 0 and self.white[other_pawn[0]].get_prev_position()[0] == \
                         self.white[other_pawn[0]].get_position()[0] + a + a:
                     move = '{}{}{}{}'.format(get_chess_coordinates(piece.get_position()[1],
@@ -947,22 +1000,8 @@ class Board:
                 moves = []
                 captures = []
                 for change in knight_moves:  # every possible move without capture
-                    if 0 <= piece.get_position()[0]+change[0] <= 7 and 0 <= piece.get_position()[1]+change[1] <= 7:
-                        if self.get_board()[piece.get_position()[0]+change[0]][piece.get_position()[1]+change[1]] == 0:
-                            move = '{}{}{}'.format(piece.get_name()[1],
-                                                   get_chess_coordinates(
-                                                piece.get_position()[1]+change[1], piece.get_position()[0]+change[0])[0],
-                                                get_chess_coordinates(
-                                                    piece.get_position()[1]+change[1], piece.get_position()[0]+change[0])[1])
-                            moves.append(move)
-                        elif str(self.get_board()[piece.get_position()[0]+change[0]][piece.get_position()[1]+change[1]])[0] == color2:
-                            capture = '{}{}{}{}'.format('N', 'x', get_chess_coordinates(
-                                                piece.get_position()[1]+change[1], piece.get_position()[0]+change[0])[0],
-                                                        get_chess_coordinates(piece.get_position()[1] + change[1],
-                                                            piece.get_position()[0] + change[0])[1])
-                            captures.append(capture)
-                    tab[piece] = moves
-                    tab_caps[piece] = captures
+                    if 0 <= piece.get_position()[0] + change[0] <= 7 and 0 <= piece.get_position()[1] + change[1] <= 7:
+                        tab, tab_caps = self.format_king_knight_moves(piece, change, moves, color2, captures, tab, tab_caps)
 
         ranking, tab, good_moves = rank_moves_and_coordinates(tab)
         cap_ranking, tab_caps, good_captures = rank_moves_and_coordinates(tab_caps)
@@ -972,7 +1011,7 @@ class Board:
         for i in range(len(good_captures)):
             good_moves.append(good_captures[i])
 
-        return good_moves                        # also correct reading knights jumps if f.e. Ng3e2 cus rn it's only for Nge2
+        return good_moves  # also correct reading knights jumps if f.e. Ng3e2 cus rn it's only for Nge2
 
     def bishop_possible_moves(self, color, letter):
         if color == 'white':
@@ -1022,9 +1061,9 @@ class Board:
         if 0 <= piece.get_position()[0] + a <= 7 and 0 <= piece.get_position()[1] + b <= 7 and \
                 str(self.get_board()[piece.get_position()[0] + a][piece.get_position()[1] + b])[0] == color2:
             capture = '{}{}{}{}'.format(letter, 'x', get_chess_coordinates(piece.get_position()[1] + b,
-                                                                 piece.get_position()[0] + a)[0],
-                                   get_chess_coordinates(piece.get_position()[1] + b,
-                                                         piece.get_position()[0] + a)[1])
+                                                                           piece.get_position()[0] + a)[0],
+                                        get_chess_coordinates(piece.get_position()[1] + b,
+                                                              piece.get_position()[0] + a)[1])
             captures.append(capture)
         return moves, captures
 
@@ -1067,27 +1106,27 @@ class Board:
             else:
                 a -= 1
         if 0 <= piece.get_position()[0] + a <= 7 and \
-                str(self.get_board()[piece.get_position()[0]+a][piece.get_position()[1]])[0] == color2:
+                str(self.get_board()[piece.get_position()[0] + a][piece.get_position()[1]])[0] == color2:
             capture = '{}{}{}{}'.format(letter, 'x', get_chess_coordinates(piece.get_position()[1],
-                                                                           piece.get_position()[0]+a)[0],
-                                        get_chess_coordinates(piece.get_position()[1], piece.get_position()[0]+a)[1])
+                                                                           piece.get_position()[0] + a)[0],
+                                        get_chess_coordinates(piece.get_position()[1], piece.get_position()[0] + a)[1])
             captures.append(capture)
 
         while 0 <= piece.get_position()[1] + b <= 7 and \
-                self.get_board()[piece.get_position()[0]][piece.get_position()[1]+b] == 0:
-            move = '{}{}{}'.format(letter, get_chess_coordinates(piece.get_position()[1]+b,
-                                                                piece.get_position()[0])[0],
-                                get_chess_coordinates(piece.get_position()[1]+b, piece.get_position()[0])[1])
+                self.get_board()[piece.get_position()[0]][piece.get_position()[1] + b] == 0:
+            move = '{}{}{}'.format(letter, get_chess_coordinates(piece.get_position()[1] + b,
+                                                                 piece.get_position()[0])[0],
+                                   get_chess_coordinates(piece.get_position()[1] + b, piece.get_position()[0])[1])
             moves.append(move)
             if b > 0:
                 b += 1
             else:
                 b -= 1
         if 0 <= piece.get_position()[1] + b <= 7 and \
-                str(self.get_board()[piece.get_position()[0]][piece.get_position()[1]+b])[0] == color2:
+                str(self.get_board()[piece.get_position()[0]][piece.get_position()[1] + b])[0] == color2:
             capture = '{}{}{}{}'.format(letter, 'x', get_chess_coordinates(piece.get_position()[1] + b,
-                                                                 piece.get_position()[0])[0],
-                                   get_chess_coordinates(piece.get_position()[1] + b, piece.get_position()[0])[1])
+                                                                           piece.get_position()[0])[0],
+                                        get_chess_coordinates(piece.get_position()[1] + b, piece.get_position()[0])[1])
             captures.append(capture)
         return moves, captures
 
@@ -1122,6 +1161,63 @@ class Board:
 
         return good_moves
 
+    def king_possible_moves(self, color):
+        if color == 'white':
+            piece_list = self.white.values()
+            color2 = 'b'
+        else:
+            piece_list = self.black.values()
+            color2 = 'w'
+        king_moves = [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, 1], [1, 0], [1, -1]]
+        tab = {}
+        tab_caps = {}
+        for piece in piece_list:
+            if piece.get_name()[1] == 'K':
+                moves = []
+                captures = []
+                for change in king_moves:
+                    tab, tab_caps = self.format_king_knight_moves(piece, change, moves, color2, captures, tab, tab_caps)
+
+        ranking, tab, good_moves = rank_moves_and_coordinates(tab)
+        cap_ranking, tab_caps, good_captures = rank_moves_and_coordinates(tab_caps)
+
+        good_moves = format_multiple_moves(ranking, tab, good_moves, 0, 'K')
+        good_captures = format_multiple_moves(cap_ranking, tab_caps, good_captures, 1, 'K')
+
+        for i in range(len(good_captures)):
+            good_moves.append(good_captures[i])
+
+        for move in self.get_moves()[1]:
+            for good_move in good_moves:
+                if move[-2:] == good_move[-2:] and good_move[0] == 'K':
+                    good_moves.pop(good_moves.index(good_move))
+        return good_moves
+
+    def format_king_knight_moves(self, piece, change, moves, color2, captures, tab, tab_caps):
+        if 0 <= piece.get_position()[0] + change[0] <= 7 and 0 <= piece.get_position()[1] + change[1] <= 7:
+            if self.get_board()[piece.get_position()[0] + change[0]][
+                    piece.get_position()[1] + change[1]] == 0:
+                move = '{}{}{}'.format(piece.get_name()[1],
+                                       get_chess_coordinates(
+                                           piece.get_position()[1] + change[1],
+                                           piece.get_position()[0] + change[0])[0],
+                                       get_chess_coordinates(
+                                           piece.get_position()[1] + change[1],
+                                           piece.get_position()[0] + change[0])[1])
+                moves.append(move)
+            elif str(self.get_board()[piece.get_position()[0] + change[0]][
+                         piece.get_position()[1] + change[1]])[
+                        0] == color2:
+                capture = '{}{}{}{}'.format(piece.get_name()[1], 'x', get_chess_coordinates(
+                    piece.get_position()[1] + change[1], piece.get_position()[0] + change[0])[0],
+                                        get_chess_coordinates(piece.get_position()[1] + change[1],
+                                                              piece.get_position()[0] + change[0])[1])
+                captures.append(capture)
+
+        tab[piece] = moves
+        tab_caps[piece] = captures
+        return tab, tab_caps
+
     def print_moves(self, color):
         m = self.pawn_possible_moves(color)
         print(f'Possible pawn moves: ', end='')
@@ -1145,23 +1241,23 @@ class Board:
         mb = self.bishop_possible_moves('white', 'B')
         mr = self.rook_possible_moves('white', 'R')
         mq = self.queen_possible_moves('white', 'Q')
-        m = m + mn + mb + mr + mq
+        mk = self.king_possible_moves('white')
+        m = m + mn + mb + mr + mq + mk
         b = self.pawn_possible_moves('black')
         bn = self.knight_possible_moves('black')
         bb = self.bishop_possible_moves('black', 'B')
         br = self.rook_possible_moves('black', 'R')
         bq = self.queen_possible_moves('black', 'Q')
-        b = b + bn + bb + br + bq
+        bk = self.king_possible_moves('black')
+        b = b + bn + bb + br + bq + bk
         if self.get_flag() == 1:
             self.set_all_moves(m, b)
         else:
             self.set_all_moves(b, m)
 
-    def checks(self):
-        a = 0
-        self.all_moves()
+    def pins(self):
         moves1 = self.get_moves()[0]
-        moves2 = self.get_moves()[1]
+
         if self.get_flag() == 1:
             king = [i for i in self.white if self.white[i].get_name()[1] == 'K']
             king = self.white[king[0]]
@@ -1170,26 +1266,100 @@ class Board:
             king = self.black[king[0]]
         x = king.get_position()
 
+        pins = []
+        for move1 in moves1:
+            if move1[0] != 'K':
+                board_copy = copy.deepcopy(self)
+                board_copy.make_move(move1)
+                board_copy.update_board()
+                board_copy.all_moves()
+                for move in board_copy.get_moves()[0]:
+                    if move[-2] != '=':
+                        coordinates = get_board_list_coordinates(move[-2], move[-1])
+                        coordinates.reverse()
+                        if x == coordinates:
+                            pins.append(move1)
+                    else:
+                        coordinates = get_board_list_coordinates(move[-4], move[-3])
+                        coordinates.reverse()
+                        if x == coordinates:
+                            pins.append(move1)
+        return pins
+
+    def king_check(self, color):
+        a = 0
+        self.all_moves()
+        moves1 = self.get_moves()[0]
+        if color == 'white':
+            king = [i for i in self.white if self.white[i].get_name()[1] == 'K']
+            king = self.white[king[0]]
+        else:
+            king = [i for i in self.black if self.black[i].get_name()[1] == 'K']
+            king = self.black[king[0]]
+        x = king.get_position()
+
+        for move in moves1:
+            if move[-2] != '=':
+                coordinates = get_board_list_coordinates(move[-2], move[-1])
+                coordinates.reverse()
+                if x == coordinates:
+                    a += 1
+        return a
+
+    def checks(self):
+        a = 0
+        self.all_moves()
+        moves1 = self.get_moves()[0]  # ruchy czarnych
+        moves2 = self.get_moves()[1]
+        if self.get_flag() == 1:
+            king = [i for i in self.white if self.white[i].get_name()[1] == 'K']
+            king = self.white[king[0]]
+            color = 'white'
+        else:
+            king = [i for i in self.black if self.black[i].get_name()[1] == 'K']
+            king = self.black[king[0]]
+            color = 'black'
+        x = king.get_position()
+
         checks = []
-        for move in moves2:
+        for move in moves2:  # finding moves that attack king
             if move[-2] != '=':
                 coordinates = get_board_list_coordinates(move[-2], move[-1])
                 coordinates.reverse()
                 if x == coordinates:
                     checks.append(move)
                     a += 1
-                    print('Checkers, man...')
+            else:
+                coordinates = get_board_list_coordinates(move[-4], move[-3])
+                coordinates.reverse()
+                if x == coordinates:
+                    checks.append(move)
+                    a += 1
         shield_moves = []
-        if len(checks) > 0:
+        if len(checks) == 1:
             for move1 in moves1:
                 board_copy = copy.deepcopy(self)
                 board_copy.make_move(move1)
                 board_copy.update_board()
-
                 board_copy.all_moves()
                 moves2 = board_copy.get_moves()[0]
-                if checks[0] not in moves2:
-                    shield_moves.append(move1)
+                if move1[0] == 'K':
+                    if_good_king_move = board_copy.king_check(color)
+                    if if_good_king_move == 0:
+                        shield_moves.append(move1)
+                else:
+                    if checks[0] not in moves2:
+                        shield_moves.append(move1)
+        elif len(checks) > 1:
+            for move1 in moves1:
+                board_copy = copy.deepcopy(self)
+                board_copy.make_move(move1)
+                board_copy.update_board()
+                board_copy.all_moves()
+                if move1[0] == 'K':
+                    if_good_king_move = board_copy.king_check(color)
+                    if if_good_king_move == 0:
+                        shield_moves.append(move1)
 
         return shield_moves, a
 
@@ -1293,29 +1463,44 @@ class Board:
             board[piece.get_position()[0]][piece.get_position()[1]] = piece.get_name()
         self.set_board(board)
 
-    def if_checks(self):
+    def if_checks_pins(self):
         self.all_moves()
         shield, if_checked = self.checks()
-        if if_checked > 0:
+        pinned = self.pins()
+        if if_checked >= 1:
             legal_moves = [i for i in shield if i in self.get_moves()[0]]
         else:
             legal_moves = self.get_moves()[0]
-        print(legal_moves)
+        if len(pinned) > 0:
+            for move in pinned:
+                if move in legal_moves:
+                    legal_moves.pop(legal_moves.index(move))
+        # print(legal_moves)  # shows all legal moves
+        if if_checked >= 1 and len(legal_moves) == 0:
+            return 0
+        elif if_checked == 0 and len(legal_moves) == 0:
+            return 1
         self.set_legal_moves(legal_moves)
 
     def play_game(self, move):
-        print("\n")
-        self.if_checks()
-        print("\n")
-        print(f'Soldier! Order from your commander: {move}!')
+        check_stale = self.if_checks_pins()
+        if check_stale == 0:
+            return self.get_flag()
+        elif check_stale == 1:
+            return 0.5
+
+        if self.get_flag() == 1:
+            print(f'White to move: {move}')
+        else:
+            print(f'Black to move: {move}')
+        if len(move) == 0:
+            move = str(input())
+        print()
+
         self.make_move(move)
         self.set_pieces()
         self.update_board()
         self.show_board()
-
-        # if len(shield) > 0:
-        #     print(f'only moves: {shield}')
-        # self.set_all_moves(self.get_moves()[self.get_flag()], shield)
 
 
 class Piece:
@@ -1336,6 +1521,9 @@ class Piece:
 
     def get_color(self):
         return self.__color
+
+    def get_value(self):
+        return self.__value
 
     def get_prev_position(self):
         return self.__prev_position
@@ -1455,40 +1643,15 @@ def queen_possibilities_test(board):
         board.make_move(move)
 
 
-def print_hi(name):
+def print_hi(name):  # paty
     print(f'Hi, I am {name} \n')
-    board = set_chessboard()
-    board.sort_pieces()  # In future showing game moves on the right side of the board and maybe saving to pgn
-    moves = ['e4', 'f5', 'exf5', 'g6', 'fxg6', 'Nf6', 'gxh7', 'Ng8', 'a3', 'Rxh7', 'a4', 'Nf6', 'Qh5']  # write moves in order once
+    game = Game()  # In future showing game moves on the right side of the board and maybe saving to pgn
+    moves = ['e4', 'f5', 'exf5', 'g6', 'fxg6', 'Nf6', 'g7', 'e6', 'g8=R', 'Kf7', 'a3', 'a6', 'Qh5']  # write moves in order once
     for move in moves:
-        board.play_game(move)
+        game.lets_play(move)
 
-    # c = str(input())  #write moves in console
-    # moves = c.split(',')
-    # for move in moves:
-    #     board.make_move(move)
-
-    # board.make_move("a4")
-    # board.make_move("b5")
-    # board.make_move("axb5")
-    # board.make_move("a4")
-    # board.make_move("Nf3")
-    # board.make_move("e6")
-    # board.make_move("d3")
-    # board.make_move("exf5")
-    # board.make_move("Nbd2")
-    # board.make_move("Ne4")
-    # board.make_move("Ng5")
-    # board.make_move("h6")
-    # board.make_move("Ndxe4")
-    # board.make_move("0-0")
-    for i in range(10):  # write 1 move at a time in console
-        board.if_checks()
-        i = str(input())
-        board.play_game(i)
-    # for piece in board.get_pieces().values():
-    #     if piece.get_name()[1] == 'P':
-    #         print(piece.get_name(), piece.get_position())
+    while game.get_winner() == 0:
+        game.lets_play('')
 
 
 if __name__ == '__main__':
