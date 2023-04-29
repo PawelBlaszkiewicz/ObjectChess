@@ -104,7 +104,7 @@ class Game:
         if self.winner in [-1, 1]:
             print(f'Brawo! Gracz {color} wygrał partię!')
         elif self.winner == 0.5:
-            print(f'Remis!')
+            print(f'STALEMATE!')
 
 
 class Board:
@@ -706,6 +706,7 @@ class Board:
                                         piece, move, coordinates, other_pieces_d, b)
                                 else:
                                     move_flag = self.normal_capture(piece, coordinates, other_pieces_d, b)
+                        piece.set_if_moved()
 
                     elif piece.get_position()[1] == coordinates[1]:  # vertical lines
                         change = piece.get_position()[0] - coordinates[0]
@@ -737,6 +738,7 @@ class Board:
                                         piece, move, coordinates, other_pieces_d, b)
                                 else:
                                     move_flag = self.normal_capture(piece, coordinates, other_pieces_d, b)
+                        piece.set_if_moved()
         if move_flag == 0 and letter == 'R':
             print(f'Nie możesz wykonać ruchu {move}.')
             print(f'Zaproponuj inny ruch.')
@@ -780,6 +782,7 @@ class Board:
                                 move_flag = self.move_piece_from_adequate_square(piece, coordinates, move)
                             else:
                                 move_flag = self.normal_move(piece, coordinates)
+                    piece.set_if_moved()
 
                 elif piece.get_position()[1] == coordinates[1]:  # vertical lines
                     change = piece.get_position()[0] - coordinates[0]
@@ -808,6 +811,7 @@ class Board:
                                 move_flag = self.move_piece_from_adequate_square(piece, coordinates, move)
                             else:
                                 move_flag = self.normal_move(piece, coordinates)
+                    piece.set_if_moved()
         if move_flag == 0 and letter == 'R':
             print(f'Nie możesz wykonać ruchu {move}.')
             print(f'Zaproponuj inny ruch.')
@@ -829,6 +833,7 @@ class Board:
                     b = [i for i in other_pieces_d if other_pieces_d[i].get_position() == coordinates]
                     if len(b) > 0:
                         move_flag = self.normal_capture(piece, coordinates, other_pieces_d, b)
+                        piece.set_if_moved()
         if move_flag == 0:
             print(f'Nie możesz wykonać bicia {move}.')
             print(f'Zaproponuj inny ruch.')
@@ -845,6 +850,7 @@ class Board:
                 change = [piece.get_position()[0] - coordinates[0], piece.get_position()[1] - coordinates[1]]
                 if change in king_moves and self.get_board()[coordinates[0]][coordinates[1]] == 0:
                     move_flag = self.normal_move(piece, coordinates)
+                    piece.set_if_moved()
         if move_flag == 0:
             print(f'Nie możesz wykonać ruchu {move}.')
             print(f'Zaproponuj inny ruch.')
@@ -972,7 +978,8 @@ class Board:
                 other_pawn = [i for i in self.white if self.white[i].get_name()[1] == 'P'
                               and self.white[i].get_position() == [piece.get_position()[0],
                                                                    piece.get_position()[1] + b]]
-                if len(other_pawn) > 0 and self.white[other_pawn[0]].get_prev_position()[0] == \
+                if len(other_pawn) > 0 and len(self.white[other_pawn[0]].get_prev_position()) > 0 and \
+                        self.white[other_pawn[0]].get_prev_position()[0] == \
                         self.white[other_pawn[0]].get_position()[0] + a + a:
                     move = '{}{}{}{}'.format(get_chess_coordinates(piece.get_position()[1],
                                                                    piece.get_position()[0])[0],
@@ -1218,6 +1225,44 @@ class Board:
         tab_caps[piece] = captures
         return tab, tab_caps
 
+    def possible_castles(self, color):
+        if color == 'white':
+            piece_list = self.white.values()
+            row = 0
+        else:
+            piece_list = self.black.values()
+            row = 7
+        moves1 = self.get_moves()[0]
+        moves2 = self.get_moves()[1]
+        pos_castles = []
+        for piece in piece_list:
+            if piece.get_name()[1] == 'K' and piece.get_if_moved() == 0 and piece.get_position() == [row, 4]:
+                x = piece.get_position()
+                if self.get_board()[row][5] == 0 and self.get_board()[row][6] == 0:
+                    for piece2 in piece_list:
+                        if piece2.get_name()[1] == 'R' and piece2.get_position() == [row, 7] and piece2.get_if_moved() == 0:
+                            pos_castles.append('O-O')
+                            for move in moves2:
+                                if move[-2] != '=':
+                                    coordinates = get_board_list_coordinates(move[-2], move[-1])
+                                    coordinates.reverse()
+                                    if x == coordinates or coordinates == [row, 5] or coordinates == [row, 6]:
+                                        pos_castles.pop(pos_castles.index('O-O'))
+                                        break
+                if self.get_board()[row][1] == 0 and self.get_board()[row][2] == 0 and self.get_board()[row][3] == 0:
+                    for piece2 in piece_list:
+                        if piece2.get_name()[1] == 'R' and piece2.get_position() == [row, 0] and piece2.get_if_moved() == 0:
+                            pos_castles.append('O-O-O')
+                            for move in moves2:
+                                if move[-2] != '=':
+                                    coordinates = get_board_list_coordinates(move[-2], move[-1])
+                                    coordinates.reverse()
+                                    if x == coordinates or coordinates == [row, 1] or coordinates == [row, 2]\
+                                            or coordinates == [row, 3]:
+                                        pos_castles.pop(pos_castles.index('O-O-O'))
+                                        break
+        return pos_castles
+
     def print_moves(self, color):
         m = self.pawn_possible_moves(color)
         print(f'Possible pawn moves: ', end='')
@@ -1242,14 +1287,16 @@ class Board:
         mr = self.rook_possible_moves('white', 'R')
         mq = self.queen_possible_moves('white', 'Q')
         mk = self.king_possible_moves('white')
-        m = m + mn + mb + mr + mq + mk
+        mc = self.possible_castles('white')
+        m = m + mn + mb + mr + mq + mk + mc
         b = self.pawn_possible_moves('black')
         bn = self.knight_possible_moves('black')
         bb = self.bishop_possible_moves('black', 'B')
         br = self.rook_possible_moves('black', 'R')
         bq = self.queen_possible_moves('black', 'Q')
         bk = self.king_possible_moves('black')
-        b = b + bn + bb + br + bq + bk
+        bc = self.possible_castles('black')
+        b = b + bn + bb + br + bq + bk + bc
         if self.get_flag() == 1:
             self.set_all_moves(m, b)
         else:
@@ -1268,18 +1315,18 @@ class Board:
 
         pins = []
         for move1 in moves1:
-            if move1[0] != 'K':
+            if move1[0] != 'K' and move1 != 'O-O' and move1 != 'O-O-O':
                 board_copy = copy.deepcopy(self)
                 board_copy.make_move(move1)
                 board_copy.update_board()
                 board_copy.all_moves()
                 for move in board_copy.get_moves()[0]:
-                    if move[-2] != '=':
+                    if move[-2] != '=' and move != 'O-O' and move != 'O-O-O':
                         coordinates = get_board_list_coordinates(move[-2], move[-1])
                         coordinates.reverse()
                         if x == coordinates:
                             pins.append(move1)
-                    else:
+                    elif move != 'O-O' and move != 'O-O-O':
                         coordinates = get_board_list_coordinates(move[-4], move[-3])
                         coordinates.reverse()
                         if x == coordinates:
@@ -1309,8 +1356,9 @@ class Board:
     def checks(self):
         a = 0
         self.all_moves()
-        moves1 = self.get_moves()[0]  # ruchy czarnych
+        moves1 = self.get_moves()[0]
         moves2 = self.get_moves()[1]
+        print(moves1)
         if self.get_flag() == 1:
             king = [i for i in self.white if self.white[i].get_name()[1] == 'K']
             king = self.white[king[0]]
@@ -1323,13 +1371,13 @@ class Board:
 
         checks = []
         for move in moves2:  # finding moves that attack king
-            if move[-2] != '=':
+            if move[-2] != '=' and move != 'O-O' and move != 'O-O-O':
                 coordinates = get_board_list_coordinates(move[-2], move[-1])
                 coordinates.reverse()
                 if x == coordinates:
                     checks.append(move)
                     a += 1
-            else:
+            elif move != 'O-O' and move != 'O-O-O':
                 coordinates = get_board_list_coordinates(move[-4], move[-3])
                 coordinates.reverse()
                 if x == coordinates:
@@ -1488,14 +1536,13 @@ class Board:
             return self.get_flag()
         elif check_stale == 1:
             return 0.5
-
+        print()
         if self.get_flag() == 1:
             print(f'White to move: {move}')
         else:
             print(f'Black to move: {move}')
         if len(move) == 0:
             move = str(input())
-        print()
 
         self.make_move(move)
         self.set_pieces()
@@ -1512,6 +1559,7 @@ class Piece:
         self.__value = val
         self.__prev_position = []
         self.__possible_moves = []
+        self.__if_moved = 0
 
     def get_name(self):
         return self.__color[0] + self.__name[0]
@@ -1528,11 +1576,17 @@ class Piece:
     def get_prev_position(self):
         return self.__prev_position
 
+    def get_if_moved(self):
+        return self.__if_moved
+
     def set_prev_position(self, coordinates):
         self.__prev_position = coordinates
 
     def change_position(self, coordinates):
         self.__position = coordinates
+
+    def set_if_moved(self):
+        self.__if_moved = 1
 
 
 class Pawn(Piece):
@@ -1643,10 +1697,10 @@ def queen_possibilities_test(board):
         board.make_move(move)
 
 
-def print_hi(name):  # paty
+def print_hi(name):  #checking exact position of king and rook in castling(as a move), more coordinates to movinf ex. Ng1h3
     print(f'Hi, I am {name} \n')
     game = Game()  # In future showing game moves on the right side of the board and maybe saving to pgn
-    moves = ['e4', 'f5', 'exf5', 'g6', 'fxg6', 'Nf6', 'g7', 'e6', 'g8=R', 'Kf7', 'a3', 'a6', 'Qh5']  # write moves in order once
+    moves = ['e4', 'e5', 'Nf3', 'Nc6', 'c3', 'Nf6', 'd4', 'Nxe4', 'd5', 'Ne7', 'Nxe5', 'd6', 'Bb5', 'c6', 'a3', 'Ng3']  # write moves in order once
     for move in moves:
         game.lets_play(move)
 
