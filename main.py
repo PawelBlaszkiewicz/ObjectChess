@@ -1,7 +1,8 @@
-import copy, time
+import copy
 
-global transition_dict
-global transition_dict1
+
+transition_dict = {0: 'a', 1: 'b', 2: 'c', 3: 'd', 4: 'e', 5: 'f', 6: 'g', 7: 'h'}
+transition_dict1 = {0: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 7, 7: 8}
 
 
 def count_coordinates(tab, move, num):
@@ -72,13 +73,16 @@ class Game:
 
     def evaluate(self):
         self.evaluation = float(0)
-        pieces = self.board.get_pieces().values()
-        for piece in pieces:
+        for piece in self.board.white.values():
             value = piece.get_value()
-            if piece.get_name()[0] == 'w':
-                self.evaluation = self.evaluation + value
-            else:
-                self.evaluation = self.evaluation - value
+            self.evaluation = self.evaluation + value
+        for piece in self.board.black.values():
+            value = piece.get_value()
+            self.evaluation = self.evaluation - value
+        if self.winner == 1:
+            self.evaluation = 1000000
+        if self.winner == -1:
+            self.evaluation = -1000000
 
     def prep_game(self):
         self.board = set_chessboard()
@@ -345,9 +349,6 @@ class Board:
                             del other_pieces_d[b[0]]  # delete captured piece from dict
                             move_flag = 1
                         break
-        if move_flag == 0:
-            print(f'Nie możesz wykonać bicia {move}.')
-            print(f'Zaproponuj inny ruch.')
 
     def pawn_move(self, coordinates, move):
         move_flag = 0
@@ -411,31 +412,42 @@ class Board:
                         else:
                             self.move_black_piece(piece, coordinates)
                         break
-        if move_flag == 0:
-            print(f'{move} jest niewykonalne. Wykonaj inny ruch.')
 
     def capture_piece_from_adequate_square(self, piece, move, coordinates, other_pieces_d, b):
         move_flag = 0
-        if move[1] in [str(1), str(2), str(3), str(4), str(5), str(6), str(7), str(8)] \
-                and piece.get_position()[0] == get_board_list_coordinates('a', move[1])[1]:
-            if self.get_flag() == 1:
-                self.move_white_piece(piece, coordinates)
-                del other_pieces_d[b[0]]
-                move_flag = 1
-            elif self.get_flag() == 0:
-                self.move_black_piece(piece, coordinates)
-                del other_pieces_d[b[0]]
-                move_flag = 1
-        elif move[1] in ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'] and \
-                piece.get_position()[1] == get_board_list_coordinates(move[1], 1)[0]:
-            if self.get_flag() == 1:
-                self.move_white_piece(piece, coordinates)
-                del other_pieces_d[b[0]]
-                move_flag = 1
-            elif self.get_flag() == 0:
-                self.move_black_piece(piece, coordinates)
-                del other_pieces_d[b[0]]
-                move_flag = 1
+        if len(move) == 5:
+            if move[1] in [str(1), str(2), str(3), str(4), str(5), str(6), str(7), str(8)] \
+                    and piece.get_position()[0] == get_board_list_coordinates('a', move[1])[1]:
+                if self.get_flag() == 1:
+                    self.move_white_piece(piece, coordinates)
+                    del other_pieces_d[b[0]]
+                    move_flag = 1
+                elif self.get_flag() == 0:
+                    self.move_black_piece(piece, coordinates)
+                    del other_pieces_d[b[0]]
+                    move_flag = 1
+            elif move[1] in ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'] and \
+                    piece.get_position()[1] == get_board_list_coordinates(move[1], 1)[0]:
+                if self.get_flag() == 1:
+                    self.move_white_piece(piece, coordinates)
+                    del other_pieces_d[b[0]]
+                    move_flag = 1
+                elif self.get_flag() == 0:
+                    self.move_black_piece(piece, coordinates)
+                    del other_pieces_d[b[0]]
+                    move_flag = 1
+        elif len(move) >= 6:
+            x = get_board_list_coordinates(move[1], 1)[0]
+            y = get_board_list_coordinates('a', move[2])[1]
+            if piece.get_position() == [y, x]:
+                if self.get_flag() == 1:
+                    self.move_white_piece(piece, coordinates)
+                    del other_pieces_d[b[0]]
+                    move_flag = 1
+                elif self.get_flag() == 0:
+                    self.move_black_piece(piece, coordinates)
+                    del other_pieces_d[b[0]]
+                    move_flag = 1
         return move_flag
 
     def normal_capture(self, piece, coordinates, other_pieces_d, b):
@@ -452,22 +464,33 @@ class Board:
 
     def move_piece_from_adequate_square(self, piece, coordinates, move):
         move_flag = 0
-        if move[1] in [str(1), str(2), str(3), str(4), str(5), str(6), str(7), str(8)] \
-                and piece.get_position()[0] == get_board_list_coordinates('a', move[1])[1]:
-            if self.get_flag() == 1:
-                self.move_white_piece(piece, coordinates)
-                move_flag = 1
-            elif self.get_flag() == 0:
-                self.move_black_piece(piece, coordinates)
-                move_flag = 1
-        elif move[1] in ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'] and \
-                piece.get_position()[1] == get_board_list_coordinates(move[1], 1)[0]:
-            if self.get_flag() == 1:
-                self.move_white_piece(piece, coordinates)
-                move_flag = 1
-            elif self.get_flag() == 0:
-                self.move_black_piece(piece, coordinates)
-                move_flag = 1
+        if len(move) == 4:
+            if move[1] in [str(1), str(2), str(3), str(4), str(5), str(6), str(7), str(8)] \
+                    and piece.get_position()[0] == get_board_list_coordinates('a', move[1])[1]:
+                if self.get_flag() == 1:
+                    self.move_white_piece(piece, coordinates)
+                    move_flag = 1
+                elif self.get_flag() == 0:
+                    self.move_black_piece(piece, coordinates)
+                    move_flag = 1
+            elif move[1] in ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'] and \
+                    piece.get_position()[1] == get_board_list_coordinates(move[1], 1)[0]:
+                if self.get_flag() == 1:
+                    self.move_white_piece(piece, coordinates)
+                    move_flag = 1
+                elif self.get_flag() == 0:
+                    self.move_black_piece(piece, coordinates)
+                    move_flag = 1
+        elif len(move) >= 5:
+            x = get_board_list_coordinates(move[1], 1)[0]
+            y = get_board_list_coordinates('a', move[2])[1]
+            if piece.get_position() == [y, x]:
+                if self.get_flag() == 1:
+                    self.move_white_piece(piece, coordinates)
+                    move_flag = 1
+                elif self.get_flag() == 0:
+                    self.move_black_piece(piece, coordinates)
+                    move_flag = 1
         return move_flag
 
     def normal_move(self, piece, coordinates):
@@ -495,14 +518,11 @@ class Board:
                 if change in knight_moves:
                     b = [i for i in other_pieces_d if other_pieces_d[i].get_position() == coordinates]
                     if len(b) > 0:
-                        if move[2] == 'x':  # if need to choose from 2 or more knights on row or column
+                        if 'x' in move[2:4]:  # if need to choose from 2 or more knights on row or column
                             move_flag = self.capture_piece_from_adequate_square(
                                 piece, move, coordinates, other_pieces_d, b)
                         else:
                             move_flag = self.normal_capture(piece, coordinates, other_pieces_d, b)
-        if move_flag == 0:
-            print(f'Nie możesz wykonać bicia {move}.')
-            print(f'Zaproponuj inny ruch.')
 
     def knight_move(self, coordinates, move, knight_moves):
         move_flag = 0
@@ -521,9 +541,6 @@ class Board:
                             break
                     else:
                         move_flag = self.normal_move(piece, coordinates)
-        if move_flag == 0:
-            print(f'Nie możesz wykonać ruchu {move}.')
-            print(f'Zaproponuj inny ruch.')
 
     def bishop_capture(self, coordinates, move, letter):
         move_flag = 0
@@ -540,7 +557,7 @@ class Board:
                     b = [i for i in other_pieces_d if other_pieces_d[i].get_position() == coordinates]
                     if len(b) > 0:  # check if on coordinates is capturable piece
                         if abs(piece.get_position()[0] - coordinates[0]) == 1:
-                            if move[2] == 'x':
+                            if 'x' in move[2:4]:
                                 move_flag = self.capture_piece_from_adequate_square(
                                     piece, move, coordinates, other_pieces_d, b)
                             else:
@@ -556,7 +573,7 @@ class Board:
                                                 piece.get_position()[1] + i] != 0:
                                             c += 1
                                     if c == 0:
-                                        if move[2] == 'x':
+                                        if 'x' in move[2:4]:
                                             move_flag = self.capture_piece_from_adequate_square(
                                                 piece, move, coordinates, other_pieces_d, b)
                                         else:
@@ -567,7 +584,7 @@ class Board:
                                                 piece.get_position()[0] - i][piece.get_position()[1] - i] != 0:
                                             c += 1
                                     if c == 0:
-                                        if move[2] == 'x':
+                                        if 'x' in move[2:4]:
                                             move_flag = self.capture_piece_from_adequate_square(
                                                 piece, move, coordinates, other_pieces_d, b)
                                         else:
@@ -577,7 +594,7 @@ class Board:
                                     if self.get_board()[piece.get_position()[0] + i][piece.get_position()[1] - i] != 0:
                                         c += 1
                                 if c == 0:
-                                    if move[2] == 'x':
+                                    if 'x' in move[2:4]:
                                         move_flag = self.capture_piece_from_adequate_square(
                                             piece, move, coordinates, other_pieces_d, b)
                                     else:
@@ -587,14 +604,11 @@ class Board:
                                     if self.get_board()[piece.get_position()[0] - i][piece.get_position()[1] + i] != 0:
                                         c += 1
                                 if c == 0:
-                                    if move[2] == 'x':
+                                    if 'x' in move[2:4]:
                                         move_flag = self.capture_piece_from_adequate_square(
                                             piece, move, coordinates, other_pieces_d, b)
                                     else:
                                         move_flag = self.normal_capture(piece, coordinates, other_pieces_d, b)
-        if move_flag == 0 and letter == 'B':
-            print(f'Nie możesz wykonać ruchu {move}.')
-            print(f'Zaproponuj inny ruch.')
         return move_flag
 
     def bishop_move(self, coordinates, move, letter):
@@ -658,9 +672,6 @@ class Board:
                                         piece, coordinates, move)
                                 else:
                                     move_flag = self.normal_move(piece, coordinates)
-        if move_flag == 0 and letter == 'B':
-            print(f'Nie możesz wykonać ruchu {move}.')
-            print(f'Zaproponuj inny ruch.')
         return move_flag
 
     def rook_capture(self, coordinates, move, letter):
@@ -739,9 +750,6 @@ class Board:
                                 else:
                                     move_flag = self.normal_capture(piece, coordinates, other_pieces_d, b)
                         piece.set_if_moved()
-        if move_flag == 0 and letter == 'R':
-            print(f'Nie możesz wykonać ruchu {move}.')
-            print(f'Zaproponuj inny ruch.')
         return move_flag
 
     def rook_move(self, coordinates, move, letter):
@@ -812,9 +820,6 @@ class Board:
                             else:
                                 move_flag = self.normal_move(piece, coordinates)
                     piece.set_if_moved()
-        if move_flag == 0 and letter == 'R':
-            print(f'Nie możesz wykonać ruchu {move}.')
-            print(f'Zaproponuj inny ruch.')
         return move_flag
 
     def king_capture(self, coordinates, move, king_moves):
@@ -834,9 +839,6 @@ class Board:
                     if len(b) > 0:
                         move_flag = self.normal_capture(piece, coordinates, other_pieces_d, b)
                         piece.set_if_moved()
-        if move_flag == 0:
-            print(f'Nie możesz wykonać bicia {move}.')
-            print(f'Zaproponuj inny ruch.')
 
     def king_move(self, coordinates, move, king_moves):
         move_flag = 0
@@ -851,9 +853,6 @@ class Board:
                 if change in king_moves and self.get_board()[coordinates[0]][coordinates[1]] == 0:
                     move_flag = self.normal_move(piece, coordinates)
                     piece.set_if_moved()
-        if move_flag == 0:
-            print(f'Nie możesz wykonać ruchu {move}.')
-            print(f'Zaproponuj inny ruch.')
 
     def castles(self, move):
         move_flag = 0
@@ -877,9 +876,6 @@ class Board:
                         if piece2.get_name()[1] == 'R' and piece2.get_position()[1] == 0:
                             self.long_castling(piece, piece2)
                             move_flag = 1
-        if move_flag == 0:
-            print(f'Nie możesz wykonać roszady {move}.')
-            print(f'Zaproponuj inny ruch.')
 
     def pawn_possible_moves(self, color):
         piece_list, a = [], int()
@@ -1358,7 +1354,6 @@ class Board:
         self.all_moves()
         moves1 = self.get_moves()[0]
         moves2 = self.get_moves()[1]
-        print(moves1)
         if self.get_flag() == 1:
             king = [i for i in self.white if self.white[i].get_name()[1] == 'K']
             king = self.white[king[0]]
@@ -1416,7 +1411,7 @@ class Board:
             if move[0].isupper() is True:
                 if move[0] == 'N':  # Knight
                     knight_moves = [[-2, -1], [-2, 1], [-1, -2], [-1, 2], [1, 2], [1, -2], [2, 1], [2, -1]]
-                    if move[1] == 'x' or move[2] == 'x':
+                    if 'x' in move:
                         coordinates = get_board_list_coordinates(move[-2], move[-1])
                         coordinates.reverse()
 
@@ -1428,7 +1423,7 @@ class Board:
 
                         self.knight_move(coordinates, move, knight_moves)
                 elif move[0] == 'B':  # Bishop
-                    if move[1] == 'x' or move[2] == 'x':
+                    if 'x' in move:
                         coordinates = get_board_list_coordinates(move[-2], move[-1])
                         coordinates.reverse()
 
@@ -1451,7 +1446,7 @@ class Board:
                         self.rook_move(coordinates, move, "R")
                 elif move[0] == 'Q':
                     move_flag = 0
-                    if move[1] == 'x' or move[2] == 'x':
+                    if 'x' in move:
                         coordinates = get_board_list_coordinates(move[-2], move[-1])
                         coordinates.reverse()
 
@@ -1467,9 +1462,6 @@ class Board:
                             move_flag = self.bishop_move(coordinates, move, "Q")
                         if move_flag == 0:
                             move_flag = self.rook_move(coordinates, move, "Q")
-                    if move_flag == 0:
-                        print(f'Nie możesz wykonać ruchu {move}.')
-                        print(f'Zaproponuj inny ruch.')
                 elif move[0] == 'K':
                     king_moves = [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, 1], [1, 0], [1, -1]]
                     if move[1] == 'x' or move[2] == 'x':
@@ -1510,9 +1502,9 @@ class Board:
         for piece in self.black.values():
             board[piece.get_position()[0]][piece.get_position()[1]] = piece.get_name()
         self.set_board(board)
+        self.all_moves()
 
     def if_checks_pins(self):
-        self.all_moves()
         shield, if_checked = self.checks()
         pinned = self.pins()
         if if_checked >= 1:
@@ -1544,6 +1536,8 @@ class Board:
         if len(move) == 0:
             move = str(input())
 
+        if move[-1] == '+':
+            move = move[:-1]
         self.make_move(move)
         self.set_pieces()
         self.update_board()
@@ -1662,53 +1656,55 @@ def set_chessboard():
     pieces = prepare_pieces()
     board = Board(pieces)
     board.set_pieces_on_board()
+    board.update_board()
     return board
 
 
-def knight_possibilities_test(board):
+def knight_possibilities_test(game):
     moves = ['e4', 'f5', 'exf5', 'g6', 'fxg6', 'Nf6', 'gxh7', 'Ng8',
              'hxg8=N', 'd6', 'Nf6', 'Kf7', 'Ne4', 'Bg4', 'Ng3', 'Be2', 'Nc3', 'Rh5']  # write moves in order once
     for move in moves:
-        board.play_game(move)
+        game.lets_play(move)
 
 
-def bishop_possibilities_test(board):
+def bishop_possibilities_test(game):
     moves = ['d4', 'e5', 'dxe5', 'f6', 'exf6', 'Bd6', 'fxg7', 'Bf8',
              'gxh8=B', 'h5', 'g4', 'Bg7', 'gxh5', 'Bf8', 'Bd4', 'Nf6',
              'h6', 'Ng8', 'h7', 'Nf6', 'h8=B', 'Ng8', 'Bhf6', 'Nc6',
              'Bc5', 'Qe7', 'Bfg5', 'Qe3']
     for move in moves:
-        board.play_game(move)
+        game.lets_play(move)
 
 
-def rook_possibilities_test(board):
+def rook_possibilities_test(game):
     moves = ['h4', 'g5', 'hxg5', 'h6', 'gxh6', 'Bg7', 'hxg7', 'Nf6', 'a4', 'd6',
              'gxh8=R', 'Kd7', 'Ra3', 'Nc6']  # write moves in order once
     for move in moves:
-        board.play_game(move)
+        game.lets_play(move)
 
 
-def queen_possibilities_test(board):
+def queen_possibilities_test(game):
     moves = ['e4', 'f5', 'exf5', 'g6', 'fxg6', 'Nf6', 'gxh7', 'Ng8',
              'hxg8', 'b6', 'd4', 'e5', 'dxe5', 'Qe7', 'Qgd5', 'Nc6',
              'h4', 'Nb8', 'h5', 'Nc6', 'h6', 'Nb8', 'h7', 'Rg8',
-             'hxg8=Q', 'Nc6', 'Qh7', 'Bg7', 'Qhh5', 'Kd8', 'a4', 'Nd4', 'b3', 'Nf3']  # write moves in order once
-    for move in moves:
-        board.make_move(move)
-
-
-def print_hi(name):  #checking exact position of king and rook in castling(as a move), more coordinates to movinf ex. Ng1h3
-    print(f'Hi, I am {name} \n')
-    game = Game()  # In future showing game moves on the right side of the board and maybe saving to pgn
-    moves = ['e4', 'e5', 'Nf3', 'Nc6', 'c3', 'Nf6', 'd4', 'Nxe4', 'd5', 'Ne7', 'Nxe5', 'd6', 'Bb5', 'c6', 'a3', 'Ng3']  # write moves in order once
+             'hxg8=Q', 'Nc6', 'Qh7', 'Bg7', 'Qhh5', 'Kd8', 'a4', 'Nd4', 'b3', 'Nf3+']
     for move in moves:
         game.lets_play(move)
+
+
+def print_hi(name):
+    print(f'Hi, I am {name} \n')
+    game = Game()  # In future showing game moves on the right side of the board and maybe saving to pgn
+    # moves = ['e4', 'e5', 'Nf3', 'Nc6', 'c3', 'Nf6', 'd4', 'Nxe4', 'd5', 'Ne7', 'Nxe5', 'd6', 'Bb5', 'c6', 'a3', 'Ng3']  # write moves in order once
+    # for move in moves:
+    #     game.lets_play(move)
+    # queen_possibilities_test(game)
 
     while game.get_winner() == 0:
         game.lets_play('')
 
 
 if __name__ == '__main__':
-    transition_dict = {0: 'a', 1: 'b', 2: 'c', 3: 'd', 4: 'e', 5: 'f', 6: 'g', 7: 'h'}  # przejście na szachowy układ
-    transition_dict1 = {0: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 7, 7: 8}  # przejście na szachowy układ
+    # transition_dict = {0: 'a', 1: 'b', 2: 'c', 3: 'd', 4: 'e', 5: 'f', 6: 'g', 7: 'h'}  # przejście na szachowy układ
+    # transition_dict1 = {0: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 7, 7: 8}  # przejście na szachowy układ
     print_hi('PyChess')
